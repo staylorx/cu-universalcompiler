@@ -1,15 +1,15 @@
 "use strict";
 
 //ECMAScript 6 (NodeJS v6.5.0)
-//Refactored test from Homework #1, Problem #1 (+ ** and = extension)
-//03-SEP-2016
+//Homework #2
+//07-SEP-2016
 //Stephen Taylor, University of Colorado Denver
 //staylorx@gmail.com
 
 var assert = require('assert');
 var Parser = require('../app/parser.js');
 var log = require('winston');
-log.level = "debug";
+log.level = "verbose";
 
 //made this configurable because with each assignment these change slightly
 var ValidTokens = {
