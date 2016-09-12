@@ -7,48 +7,48 @@
 //staylorx@gmail.com
 
 var assert = require('assert');
-var Symantic = require('../app/semantic.js');
+var Semantic = require('../app/semantic.js');
 var log = require('winston');
 log.level = "verbose";
 
-describe('Symantic Tests, little stuff first', function(){
+describe('Semantic Tests, little stuff first', function(){
 
-  var symantic = new Symantic();
+  var Semantic = new Semantic();
 
   it('Generate, zero arg', function(){
-    assert.throws(  () => symantic._generate(),/Argument count must be between 1 and 4/);
+    assert.throws(  () => Semantic._generate(),/Argument count must be between 1 and 4/);
   });
   it('Generate, single arg', function(){
-    assert(symantic._generate("OPT") === "OPT");
+    assert(Semantic._generate("OPT") === "OPT");
   });
   it('Generate, two arg', function(){
-    assert(symantic._generate("OPT","A") === "OPT A");
+    assert(Semantic._generate("OPT","A") === "OPT A");
   });
   it('Generate, three arg', function(){
-    assert(symantic._generate("OPT","A","B") === "OPT A,B");
+    assert(Semantic._generate("OPT","A","B") === "OPT A,B");
   });
   it('Generate, four args', function(){
-    assert(symantic._generate("OPT","A","B","C") === "OPT A,B,C");
+    assert(Semantic._generate("OPT","A","B","C") === "OPT A,B,C");
   });
   it('Generate, five args', function(){
     assert.throws(
-      () => symantic._generate("OPT","A","B","C","D"), /Argument count must be between 1 and 4/);
+      () => Semantic._generate("OPT","A","B","C","D"), /Argument count must be between 1 and 4/);
   });
 
 });
 
 
-describe('Symantic Tests, checkId and getTemp', function(){
+describe('Semantic Tests, checkId and getTemp', function(){
 
-  var symantic = new Symantic();
+  var Semantic = new Semantic();
 
   it('checkId', function(){
-    assert(symantic.checkId("TestSym") === "Declare TestSym,Integer");
+    assert(Semantic.checkId("TestSym") === "Declare TestSym,Integer");
   });
 
   it('getTemp', function(){
-    assert(symantic._getTemp() === "Temp&1");
-    assert(symantic._getTemp() === "Temp&2");
+    assert(Semantic._getTemp() === "Temp&1");
+    assert(Semantic._getTemp() === "Temp&2");
   });
 
   
