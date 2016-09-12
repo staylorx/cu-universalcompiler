@@ -11,10 +11,29 @@ var Scanner = require('../app/scanner.js');
 var log = require('winston');
 log.level = "verbose";
 
+//made this configurable because with each assignment these change slightly
+var ValidTokens = {
+  BeginSym:   "BEGIN",
+  EndSym:     "END",
+  ReadSym:    "READ",
+  WriteSym:   "WRITE",
+  Id:         "ID",
+  IntLiteral: "INT",
+  LParen:     "(",
+  RParen:     ")",
+  SemiColon:  ";",
+  Comma:      ",",
+  AssignOp:   ":=",
+  PlusOp:     "+",
+  MinusOp:    "-",
+  EqualOp:    "=",
+  ExpnOp:     "**",
+  EofSym:     "EOF"
+};
+
 describe('Scanner Tests as strings', function(){
 
   it('From HW#1, listing #1 involved scan.', function(){
-    log.level = "debug";
     let programString = `
         BEGIN --SOMETHING UNUSUAL
           READ(A1, New_A, D, B);
@@ -25,14 +44,13 @@ describe('Scanner Tests as strings', function(){
         END
         `;
     log.info("========== Program #1.1 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #1.1 tokens:\n",tokenString);
     assert(tokenString === "BeginSym ReadSym LParen Id Comma Id Comma Id Comma Id RParen SemiColon Id AssignOp Id PlusOp LParen Id MinusOp Id RParen MinusOp IntLiteral SemiColon Id AssignOp LParen LParen Id MinusOp LParen IntLiteral RParen PlusOp LParen Id PlusOp Id RParen RParen RParen MinusOp LParen IntLiteral MinusOp Id RParen SemiColon WriteSym LParen Id Comma Id PlusOp Id RParen SemiColon EndSym EofSym");
   });
   
   it('From HW#1, listing #2, involved scan.', function(){
-    log.level = "verbose";
     let programString = `
         BEGIN
           READ(OPT, A, B); 
@@ -46,47 +64,43 @@ describe('Scanner Tests as strings', function(){
         END --Phew, finally done.
         `;
     log.info("========== Program #1.2 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #1.2 tokens:\n",tokenString);
     assert(tokenString === "BeginSym ReadSym LParen Id Comma Id Comma Id RParen SemiColon ReadSym LParen Id Comma Id Comma Id RParen SemiColon Id PlusOp IntLiteral AssignOp LParen Id PlusOp Id RParen MinusOp LParen Id MinusOp Id RParen SemiColon Id AssignOp IntLiteral PlusOp IntLiteral PlusOp IntLiteral MinusOp LParen Id PlusOp Id RParen SemiColon WriteSym LParen Id Comma IntLiteral RParen SemiColon EndSym EofSym");
   });
   
   it('From HW#1, extra credit example, with parens', function(){
-    log.level = "verbose";
     let programString = `BEGIN (A+(B**2)) = C+D END`;
     log.info("========== Program #2.1 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #2.1 tokens:\n",tokenString);
     assert(tokenString === "BeginSym LParen Id PlusOp LParen Id ExpnOp IntLiteral RParen RParen EqualOp Id PlusOp Id EndSym EofSym");
   });
   
   it('From HW#1, extra credit example, no parens.', function(){
-    log.level = "verbose";
     let programString = `BEGIN A+B**2 = C+D END`;
     log.info("========== Program #2.1 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #2.1 tokens:\n",tokenString);
     assert(tokenString === "BeginSym Id PlusOp Id ExpnOp IntLiteral EqualOp Id PlusOp Id EndSym EofSym");
   });
 
   it('From HW#1, chained equals not allowed.', function(){
-    log.level = "verbose";
     let programString = `BEGIN A=B=C END`;
     log.info("========== Program #2.1 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #2.1 tokens:\n",tokenString);
     assert(tokenString === "BeginSym Id EqualOp Id EqualOp Id EndSym EofSym");
   });
 
   it('From HW#2, parser input.', function(){
-    log.level = "verbose";
     let programString = `BEGIN A := B +(72 - C); END`;
     log.info("========== Homework #2, scanner listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString, ValidTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Homework #2, scanner tokens:\n",tokenString);
     assert(tokenString === "BeginSym Id AssignOp Id PlusOp LParen IntLiteral MinusOp Id RParen SemiColon EndSym EofSym");

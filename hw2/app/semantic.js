@@ -5,12 +5,9 @@ var SymbolTable = require("./symbolTable.js");
 var types = require("./types.js");
 
 /*
- * A class to parse tokens from the scanner.
- * Checks for syntacic correctness.
- *
+ * A class to build out semantic rules as output instructions.
  * ECMAScript 6 (NodeJS v6.5.0)
- * Homework #2
- * 30-AUG-2016
+ * !!! Still a work in progress. :-)
  * Stephen Taylor, University of Colorado Denver
  * staylorx@gmail.com
  */
@@ -20,17 +17,18 @@ class Semantic {
   //The "Start" semantic routine is equivalent to the instantiation
   //of the Symantic class.
   constructor() {
-    log.level = "debug";    
     log.debug("Constructing semantic...");
     
     this._currentToken = "";
     this._nextToken = "";
     
-    //calling this explicitely so I feel like I'm really "starting".
+    //so I feel like I'm really "starting".
     this.start();
     
   }
 
+  //Starts the process of semantic matching
+  //by reseting the symbol table and temp counter
   start() {
     this._symbolTable = new SymbolTable();
     this._maxTemp = 0;
@@ -109,15 +107,11 @@ class Semantic {
 
   processId(e) {
     log.debug("processId: ",e);
-    this.checkId(this._currentToken);
-    e.kind = types.expressionRecord.ID_EXPR;
-    e.name = this._currentToken;
+    this.checkId(e.name);
   }
   
   processLiteral(e) {
     log.debug("processLiteral: ",e);
-    e.kind = types.expressionRecord.LITERAL_EXPR;
-    e.val = parseInt(this._currentToken, 10);
   }
   
   _processOp(o) {

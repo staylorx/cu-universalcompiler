@@ -11,15 +11,25 @@ var Readable = require('stream').Readable;
 var types = require('./types.js');
 log.level = "verbose";
 
-//ECMA v6.5.0
+
 class Scanner {
 
   //Sets the readable stream so the scanner can work on it.
   //IN:  readableInput is either a Readable or a {S,s}tring
-  constructor(readableInput) {
+  //IN:  an object of valid tokens
+  constructor(readableInput, validTokens) {
     
+    log.debug("Constructing scanner...");
+
+    this._expressionRecord = undefined;
     this._readable = new Readable();
     this._tokenBuffer = "";
+
+    if (validTokens === undefined) {
+      throw "Scanner: A set of valid tokens must be provided";
+    }
+    
+    this._validTokens = validTokens;
     
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
       this._readable.push(readableInput);
@@ -51,8 +61,8 @@ class Scanner {
   //IN:  checkString is the identifier to be checked
   //OUT: returns the token as string or "BOGUS" if not found
   checkReserved(checkString) {
-    for (var token in TOKENS) {
-      if (TOKENS[token] == checkString) {
+    for (var token in this._validTokens) {
+      if (this._validTokens[token] == checkString) {
         return token;
       }
     }
@@ -113,8 +123,8 @@ class Scanner {
           let tempToken = this.checkReserved(this._tokenBuffer.toString());
           if (tempToken === undefined) {
             log.debug("Testing '",this._tokenBuffer,"' ,which came back as",tempToken,". Making it an Id.");
-            let exprRec = new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,this._tokenBuffer);
-            return exprRec.symbol;
+            this._expressionRecord = new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,this._tokenBuffer);
+            return this.checkReserved("ID");
           } else {
             return tempToken;
           }
@@ -126,8 +136,8 @@ class Scanner {
             this._bufferChar(char);
           }
           this._writeChar(char);
-          let exprRec = new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,this._tokenBuffer);
-          return exprRec.symbol;
+          this._expressionRecord = new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,this._tokenBuffer);
+          return this.checkReserved("INT");
 
         } else if (/[();,+=]/.test(char)) {
           //parens, semicolon, comma, and plus
@@ -192,25 +202,5 @@ class Scanner {
   }
   
 }
-
-//An enumeration (of sorts) to hold the tokens.
-var TOKENS = {
-  BeginSym:   "BEGIN",
-  EndSym:     "END",
-  ReadSym:    "READ",
-  WriteSym:   "WRITE",
-  Id:         "ID",
-  IntLiteral: "INT",
-  LParen:     "(",
-  RParen:     ")",
-  SemiColon:  ";",
-  Comma:      ",",
-  AssignOp:   ":=",
-  PlusOp:     "+",
-  MinusOp:    "-",
-  EqualOp:    "=",
-  ExpnOp:     "**",
-  EofSym:     "EOF"
-};
 
 module.exports = Scanner;

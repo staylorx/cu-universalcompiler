@@ -10,10 +10,12 @@ log.level = "verbose";
 /*
  * A class to parse tokens from the scanner.
  * Checks for syntactic correctness.
+ * Throws an error on syntax failure.
+ * Otherwise exists quietly on success.
  *
  * ECMAScript 6 (NodeJS v6.5.0)
  * Homework #2
- * 30-AUG-2016
+ * 03-SEP-2016
  * Stephen Taylor, University of Colorado Denver
  * staylorx@gmail.com
  */
@@ -21,7 +23,8 @@ class Parser {
 
   //Sets the readable stream so the scanner can work on it.
   //IN:  readableInput is either a Readable or a {S,s}tring
-  constructor(readableInput) {
+  //IN:  an object of valid tokens
+  constructor(readableInput, validTokens) {
     
     log.debug("Constructing parser...");
     
@@ -29,6 +32,12 @@ class Parser {
     this._currentToken = "";
     this._nextToken = "";
 
+    if (validTokens === undefined) {
+      throw "Parser: A set of valid tokens must be provided";
+    }
+    
+    this._validTokens = validTokens;
+    
     //test for string or Readable
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
       this._readable = new Readable();
@@ -45,7 +54,8 @@ class Parser {
     }
     
     //bit of a guess but if we're this far we've got a readable to use.
-    this._scanner = new Scanner(this._readable);
+    //remember to use the same tokens so we're all on the same page
+    this._scanner = new Scanner(this._readable, this._validTokens);
     this._scanFeed();  //let's get this party started
     this._semantic = new Semantic();
   }
@@ -56,6 +66,7 @@ class Parser {
   _scanFeed() {
     this._currentToken = this._nextToken;
     this._nextToken = this._scanner.scan();
+    log.debug("currentToken=",this._currentToken,"; nextToken=",this._nextToken);
   }
 
   /*
@@ -92,7 +103,7 @@ class Parser {
    *      otherwise return undefined.
    */
   _checkSymbol(checkToken) {
-    for (let token in TOKENS) {
+    for (let token in this._validTokens) {
       if (token == this.match(checkToken)) {
         return token;
       }
@@ -100,9 +111,7 @@ class Parser {
     return undefined;
   }
   
-  /*
-   * The main method of the class, that starts the parsing process.
-   */
+  //The main method of the class, that starts the parsing process.
   parse() {
     if (this._readable === undefined) {
       log.error("No Readable: Cannot find stream for the scanner to work against.");
@@ -112,7 +121,8 @@ class Parser {
     this._systemGoal();
     return this._parseSuccess;
   }
-  
+
+  //Grammar statement  
   _systemGoal() {
     log.verbose("14 -> <program>$");
     this._program();
@@ -120,6 +130,7 @@ class Parser {
     this._semantic.finish();
   }
   
+  //Grammar statement  
   _program() {
     log.verbose("1  -> begin <statementList> end$");
     this._semantic.start();
@@ -128,6 +139,7 @@ class Parser {
     this.match("EndSym");
   }
   
+  //Grammar statement  
   _statementList() {
     log.verbose("2  -> Id :=<statement> ;");
     this._statement();
@@ -149,6 +161,7 @@ class Parser {
     }
   }
   
+  //Grammar statement  
   _statement() {
     switch (this._nextToken) {
       case "Id":
@@ -180,29 +193,33 @@ class Parser {
     }
   }
   
+  //Grammar statement  
   _idList() {
     log.verbose("6  -> Id ;");
     this._ident();
-    this._semantic.readId();
+    //call readId with whatever is in the scanner expression record
+    this._semantic.readId(this._scanner._expressionRecord);
     if (this._nextToken === "Comma") {
-      this._match("Comma");
+      this.match("Comma");
       this._idList();
     } else {
       return;
     }
   }
   
+  //Grammar statement  
   _expressionList() {
     log.verbose("7  -> <expr list> ;");
     this._expression();
     if (this._nextToken === "Comma") {
-      this._match("Comma");
+      this.match("Comma");
       this._expressionList();
     } else {
       return;
     }
   }
   
+  //Grammar statement  
   _expression() {
     log.verbose("8  -> <expression>");
     this._primary();
@@ -215,6 +232,7 @@ class Parser {
     }
   }
   
+  //Grammar statement  
   _primary() {
     switch(this._nextToken) {
       case "LParen":
@@ -236,12 +254,13 @@ class Parser {
     }
   }
   
+  //Grammar statement  
   _ident() {
     this.match("Id");
-    log.info("!!!" + this._currentToken);
-    //this._semantic.processId(???);
+    this._semantic.processId(this._scanner._expressionRecord);
   }
   
+  //Grammar statement  
   _addOp() {
     switch(this._nextToken) {
       case "PlusOp":
@@ -258,23 +277,5 @@ class Parser {
   }
 
 }
-
-//An enumeration (of sorts) to hold the tokens.
-var TOKENS = {
-  BeginSym:   "begin",
-  EndSym:     "end",
-  ReadSym:    "read",
-  WriteSym:   "write",
-  Id:         "ID",
-  IntLiteral: "INT",
-  LParen:     "(",
-  RParen:     ")",
-  SemiColon:  ";",
-  Comma:      ",",
-  AssignOp:   ":=",
-  PlusOp:     "+",
-  MinusOp:    "-",
-  EofSym:     "EOF",
-};
 
 module.exports = Parser;

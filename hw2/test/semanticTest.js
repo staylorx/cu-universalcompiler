@@ -11,7 +11,7 @@ var Symantic = require('../app/semantic.js');
 var log = require('winston');
 log.level = "verbose";
 
-xdescribe('Symantic Tests, little stuff first', function(){
+describe('Symantic Tests, little stuff first', function(){
 
   var symantic = new Symantic();
 
@@ -38,7 +38,7 @@ xdescribe('Symantic Tests, little stuff first', function(){
 });
 
 
-xdescribe('Symantic Tests, checkId and getTemp', function(){
+describe('Symantic Tests, checkId and getTemp', function(){
 
   var symantic = new Symantic();
 
