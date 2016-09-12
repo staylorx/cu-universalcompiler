@@ -31,7 +31,7 @@ var ValidTokens = {
   EofSym:     "EOF"
 };
 
-describe('Scanner Tests as strings', function(){
+xdescribe('Scanner Tests as strings', function(){
 
   it('From HW#1, listing #1 involved scan.', function(){
     let programString = `

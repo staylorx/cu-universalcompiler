@@ -10,7 +10,7 @@ var SymbolTable = require('../app/symbolTable.js');
 var log = require('winston');
 log.level = "verbose";
 
-describe('Symbol Table Tests', function(){
+xdescribe('Symbol Table Tests', function(){
 
   it('Test zero size symbol table', function(){
     var symbolTable = new SymbolTable(0);

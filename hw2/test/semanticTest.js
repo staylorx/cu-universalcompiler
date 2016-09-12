@@ -11,7 +11,7 @@ var Semantic = require('../app/semantic.js');
 var log = require('winston');
 log.level = "verbose";
 
-describe('Semantic Tests, little stuff first', function(){
+xdescribe('Semantic Tests, little stuff first', function(){
 
   var semantic = new Semantic();
 
@@ -38,7 +38,7 @@ describe('Semantic Tests, little stuff first', function(){
 });
 
 
-describe('Semantic Tests, checkId and getTemp', function(){
+xdescribe('Semantic Tests, checkId and getTemp', function(){
 
   var semantic = new Semantic();
 

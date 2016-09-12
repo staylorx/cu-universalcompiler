@@ -16,11 +16,14 @@ class Semantic {
   //Sets the readable stream so the scanner can work on it.
   //The "Start" semantic routine is equivalent to the instantiation
   //of the Symantic class.
-  constructor() {
+  //IN:  consoleFlag is a boolean that determines if the generate will
+  //     print to console or stdout. Defaults to false.
+  constructor(consoleFlag = false) {
     log.debug("Constructing semantic...");
     
     this._currentToken = "";
     this._nextToken = "";
+    this._consoleFlag = consoleFlag;
     
     //so I feel like I'm really "starting".
     this.start();
@@ -42,8 +45,12 @@ class Semantic {
     if (args.length > 1) {
       s += " " + args.slice(1).join(",");
     }
-    //"write" the generation out
-    console.log(s);
+    
+    if (this._consoleFlag) {
+      //"write" the generation out
+      console.log(s);
+    }
+    
     //return it too so it can be tested easily
     return s;
   }

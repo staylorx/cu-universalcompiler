@@ -33,7 +33,7 @@ describe('Parser Tests', function(){
 
   it('Testing the Parser, example from the assignment.', function(){
     let programString = `begin A := B +(72 - C); end`;
-    log.info("========== HW#2, Program #1 listing:\n",programString);
+    log.info("========== HW#2, Program #1:\n",programString);
     var parser = new Parser(programString, ValidTokens);
     try {
       parser.parse();
@@ -56,7 +56,7 @@ describe('Parser Tests', function(){
           
         end --Phew, finally done.
         `;
-    log.info("========== HW#2, Program #1 listing:\n",programString);
+    log.info("========== HW#2, Something larger to test:\n",programString);
     var parser = new Parser(programString, ValidTokens);
     try {
       parser.parse();
