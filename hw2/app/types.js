@@ -1,3 +1,5 @@
+"use strict";
+
 /*
  * data types (sort of) to support the symantic routines
  */
