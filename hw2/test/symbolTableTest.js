@@ -10,18 +10,18 @@ var SymbolTable = require('../app/symbolTable.js');
 var log = require('winston');
 log.level = "verbose";
 
-xdescribe('Symbol Table Tests', function(){
+describe('Symbol Table Tests', function(){
 
   it('Test zero size symbol table', function(){
     var symbolTable = new SymbolTable(0);
-    assert(symbolTable._lastSymbol === 0);
-    assert(symbolTable._maxSymbol === 0);
+    assert(symbolTable.lastSymbol === 0);
+    assert(symbolTable.maxSymbol === 0);
   });
 
   it('Test sized symbol table', function(){
     var symbolTable = new SymbolTable(42);
-    assert(symbolTable._lastSymbol === 0);
-    assert(symbolTable._maxSymbol === 42);
+    assert(symbolTable.lastSymbol === 0);
+    assert(symbolTable.maxSymbol === 42);
   });
   
   it('Lookup non-existing symbol', function(){
@@ -45,7 +45,7 @@ xdescribe('Symbol Table Tests', function(){
     symbolTable.enter("BogusSym1");
     symbolTable.enter("BogusSym1");
     symbolTable.enter("BogusSym2");
-    assert(symbolTable._lastSymbol === 2);
+    assert(symbolTable.lastSymbol === 2);
   });
 
 });

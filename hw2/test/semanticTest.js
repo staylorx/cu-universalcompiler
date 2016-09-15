@@ -11,34 +11,34 @@ var Semantic = require('../app/semantic.js');
 var log = require('winston');
 log.level = "verbose";
 
-xdescribe('Semantic Tests, little stuff first', function(){
+describe('Semantic Tests, little stuff first', function(){
 
   var semantic = new Semantic();
 
   it('Generate, zero arg', function(){
-    assert.throws(  () => semantic._generate(),/Argument count must be between 1 and 4/);
+    assert.throws(  () => semantic.generate(),/Argument count must be between 1 and 4/);
   });
   it('Generate, single arg', function(){
-    assert(semantic._generate("OPT") === "OPT");
+    assert(semantic.generate("OPT") === "OPT");
   });
   it('Generate, two arg', function(){
-    assert(semantic._generate("OPT","A") === "OPT A");
+    assert(semantic.generate("OPT","A") === "OPT A");
   });
   it('Generate, three arg', function(){
-    assert(semantic._generate("OPT","A","B") === "OPT A,B");
+    assert(semantic.generate("OPT","A","B") === "OPT A,B");
   });
   it('Generate, four args', function(){
-    assert(semantic._generate("OPT","A","B","C") === "OPT A,B,C");
+    assert(semantic.generate("OPT","A","B","C") === "OPT A,B,C");
   });
   it('Generate, five args', function(){
     assert.throws(
-      () => semantic._generate("OPT","A","B","C","D"), /Argument count must be between 1 and 4/);
+      () => semantic.generate("OPT","A","B","C","D"), /Argument count must be between 1 and 4/);
   });
 
 });
 
 
-xdescribe('Semantic Tests, checkId and getTemp', function(){
+describe('Semantic Tests, checkId and getTemp', function(){
 
   var semantic = new Semantic();
 
@@ -47,8 +47,8 @@ xdescribe('Semantic Tests, checkId and getTemp', function(){
   });
 
   it('getTemp', function(){
-    assert(semantic._getTemp() === "Temp&1");
-    assert(semantic._getTemp() === "Temp&2");
+    assert(semantic.getTemp() === "Temp&1");
+    assert(semantic.getTemp() === "Temp&2");
   });
 
   

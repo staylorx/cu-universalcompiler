@@ -8,11 +8,6 @@ class OperatorRecord {
   
   constructor(kind = OperatorKind.PLUS_OP) {
     this.kind = kind;
-    if ( kind === OperatorKind.PLUS_OP ) {
-      this.operator = "PlusOp";
-    } else {
-      this.operator = "MinusOp";
-    }
   }
   
 }

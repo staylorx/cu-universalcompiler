@@ -11,6 +11,7 @@ var types = require("./types.js");
  * Stephen Taylor, University of Colorado Denver
  * staylorx@gmail.com
  */
+
 class Semantic {
 
   //Sets the readable stream so the scanner can work on it.
@@ -18,35 +19,33 @@ class Semantic {
   //of the Symantic class.
   //IN:  consoleFlag is a boolean that determines if the generate will
   //     print to console or stdout. Defaults to false.
-  constructor(consoleFlag = false) {
+  constructor(consoleFlag = false ) {
     log.debug("Constructing semantic...");
     
-    this._currentToken = "";
-    this._nextToken = "";
-    this._consoleFlag = consoleFlag;
+    this.currentToken = "";  
+    this.nextToken = "";  
+    this.consoleFlag = consoleFlag; 
+    this.codeLines = [];
     
-    //so I feel like I'm really "starting".
-    this.start();
+    this.symbolTable = new SymbolTable();
+    this.maxTemp = 0;
     
   }
 
-  //Starts the process of semantic matching
-  //by reseting the symbol table and temp counter
-  start() {
-    this._symbolTable = new SymbolTable();
-    this._maxTemp = 0;
-  }
-
-  _generate(...args) {
+  //Generate an instruction for the machine
+  //IN:  an array of arguments
+  //OUT: s is a string instruction
+  generate(...args) /*: string */ {
     if (args.length < 1 || args.length > 4) {
       throw "Argument count must be between 1 and 4.";
     }
-    let s = args[0];
+    let s = "";
+    s = args[0];
     if (args.length > 1) {
       s += " " + args.slice(1).join(",");
     }
     
-    if (this._consoleFlag) {
+    if (this.consoleFlag) {
       //"write" the generation out
       console.log(s);
     }
@@ -55,31 +54,36 @@ class Semantic {
     return s;
   }
   
-  checkId(symbol) {
-    if (!this._symbolTable.lookup(symbol)) {
-      this._symbolTable.enter(symbol);
-      return this._generate("Declare",symbol,"Integer");
+  
+  checkId(symbol /*: string */) {
+    if (!this.symbolTable.lookup(symbol)) {
+      //didn't find the symbol in the lookup table...
+      //generate an instruction for it then
+      this.symbolTable.enter(symbol);
+      let code = this.generate("Declare",symbol,"Integer");
+      this.codeLines.push(code);
+      return code;
     }
   }
   
-  _getTemp() {
-    this._maxTemp++;
-    var tempName = "Temp&" + this._maxTemp;
+  getTemp() /*: string */{
+    this.maxTemp++;
+    var tempName = "Temp&" + this.maxTemp;
     this.checkId(tempName);
     return tempName;
   }
   
-  _extract(e) {
+  extract(e /*:typeof types.ExpressionRecord*/) {
     switch (e.kind) {
-      case (types.expressionKind.ID_EXPR || types.expressionKind.TEMP_EXPR):
+      case (types.ExpressionKind.ID_EXPR || types.ExpressionKind.TEMP_EXPR):
         return e.name;
-      case (types.expressionKind.LITERAL_EXPR):
+      case (types.ExpressionKind.LITERAL_EXPR):
         return e.val;
     }
   }
 
-  _extractOp(o) {
-    if (o.Op === types.operator.PLUS_OP) {
+  extractOp(o /*:typeof types.OperatorRecord*/) {
+    if (o.kind === types.OperatorKind.PLUS_OP) {
       return "ADD ";
     } else {
       return "SUB ";
@@ -88,49 +92,61 @@ class Semantic {
   
   //Generates the assign
   //OUT: returns the string generated
-  assign(targetexpressionRecord,sourceexpressionRecord) {
-    return this._generate("Store",this._extract(sourceexpressionRecord),targetexpressionRecord.name);
+  assign(targetexpressionRecord /*:typeof types.ExpressionRecord*/, sourceexpressionRecord /*:typeof types.ExpressionRecord*/) /*: string */ {
+    let code = this.generate("Store",this.extract(sourceexpressionRecord),targetexpressionRecord.name);
+    this.codeLines.push(code);
+    return code;
   }
 
   //Generates the read
   //OUT: returns the string generated
-  readId(inVar) {
-    return this._generate("Read",inVar.name,"Integer");
+  readId(inVar /*: string */) /*: string */{
+    let code =  this.generate("Read",inVar.name,"Integer");
+    this.codeLines.push(code);
+    return code;
   }
 
   //Generates the write
   //OUT: returns the string generated
-  writeExpr(outExpr) {
-    return this._generate("Write",this._extract(outExpr),"Integer");
+  writeExpr(outExpr /*:typeof types.ExpressionRecord*/) {
+    let code = this.generate("Write",this.extract(outExpr),"Integer");
+    this.codeLines.push(code);
+    return code;
   }
   
   //OUT: returns an exprRec
-  genInfix(e1,op,e2) {
-    var exprRec = new types.expressionRecord(types.types.expressionKind.TEMP_EXPR);
-    exprRec.name = this._getTemp();
-    this._generate(this._extractOp(op),this._extract(e1), this._extract(e2), exprRec.name);
+  genInfix(e1 /*:typeof types.ExpressionRecord*/,op /*:typeof types.OperatorRecord*/,e2 /*:typeof types.ExpressionRecord*/)  /*: types.expressionRecord */{
+    var exprRec = new types.ExpressionRecord(types.ExpressionKind.TEMP_EXPR);
+    exprRec.name = this.getTemp();
+    let code = this.generate(this.extractOp(op),this.extract(e1), this.extract(e2), exprRec.name);
+    this.codeLines.push(code);
     return exprRec;
   }
 
-  processId(e) {
-    log.debug("processId: ",e);
-    this.checkId(e.name);
+  processId(name) {
+    this.checkId(name);
+    return new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,name);
   }
   
-  processLiteral(e) {
-    log.debug("processLiteral: ",e);
+  processLiteral(value) {
+    return new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,parseInt(value,10));
   }
   
-  _processOp(o) {
-    log.debug("processOp: ",o);
-    o.op = this._currentToken;
+  //OUT: OperatorRecord
+  processOp(token) {
+    if (token === "PlusOp") {
+      return new types.OperatorRecord(types.OperatorKind.PLUS_OP);      
+    } else {
+      return new types.OperatorRecord(types.OperatorKind.MINUS_OP);      
+    }
   }
   
-  finish() {
-    return this._generate("Halt");
+  finish() /*: string */ {
+    let code = this.generate("Halt");
+    this.codeLines.push(code);
+    return code;
   }
 
 }
-
 
 module.exports = Semantic;

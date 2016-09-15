@@ -4,8 +4,8 @@ var log = require('winston');
 var Scanner = require("./scanner.js");
 var Semantic = require("./semantic.js");
 var Readable = require('stream').Readable;
+
 log.level = "verbose";
-// @flow
 
 /*
  * A class to parse tokens from the scanner.
@@ -26,25 +26,23 @@ class Parser {
   //IN:  an object of valid tokens
   constructor(readableInput, validTokens) {
     
-    log.debug("Constructing parser...");
-    
-    this._readable;
-    this._currentToken = "";
-    this._nextToken = "";
+    this.validTokens = validTokens;
+    this.currentToken = "";
+    this.nextToken = "";
+    this.totalOutput = [];
 
     if (validTokens === undefined) {
       throw "Parser: A set of valid tokens must be provided";
     }
     
-    this._validTokens = validTokens;
-    
     //test for string or Readable
+    let readable
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
-      this._readable = new Readable();
-      this._readable.push(readableInput);
-      this._readable.push(null);
+      readable = new Readable();
+      readable.push(readableInput);
+      readable.push(null);
     } else if (readableInput instanceof Readable) {
-      this._readable = readableInput;
+      this.readable = readableInput;
     } else if (readableInput === null || readableInput === undefined) {
       log.error("Empty argument. Requires a string or Readable.");
       return;
@@ -53,20 +51,40 @@ class Parser {
       return;
     }
     
-    //bit of a guess but if we're this far we've got a readable to use.
-    //remember to use the same tokens so we're all on the same page
-    this._scanner = new Scanner(this._readable, this._validTokens);
-    this._scanFeed();  //let's get this party started
-    this._semantic = new Semantic();
-  }
+    //dump out the tokens into an array.
+    //used for the homework output
+    this.scanner = new Scanner(readable, this.validTokens);
+    this.tokenArray = [];
+    let token;
+    while ((token = this.scanner.scan()) !== "EofSym") {
+      this.tokenArray.push(this.scanner.tokenBuffer);
+    }
 
+    log.debug("Starting the process with normalized:");
+
+    //reload the scanner since we ate up the stream
+    this.scanner = new Scanner(this.tokenArrayString(), this.validTokens);
+    this.scanFeed();  //let's get this party started
+    this.semantic = new Semantic(true);
+    
+    //this is for the formatted output... it was left off to init the scanner.
+    //it's put back on to be pretty.
+    this.tokenArray.push("EofSym");
+
+  }
+  
+  //helper to normalize the tokenbuffer items
+  tokenArrayString() /* : string */ {
+    return this.tokenArray.join(" ");
+  }
+  
   /*
    * Helper method , useful to keep a pair of these since I can't peek ahead.
    */
-  _scanFeed() {
-    this._currentToken = this._nextToken;
-    this._nextToken = this._scanner.scan();
-    log.debug("currentToken=",this._currentToken,"; nextToken=",this._nextToken);
+  scanFeed() {
+    this.currentToken = this.nextToken;
+    this.nextToken = this.scanner.scan();
+    log.debug("currentToken=",this.currentToken,"; nextToken=",this.nextToken);
   }
 
   /*
@@ -78,20 +96,29 @@ class Parser {
    */
   match(legalToken) {
     //get a token off the scanner
-    log.debug ("Match(",legalToken,") called...");
-    this._scanFeed();
-    if (this._currentToken !== legalToken) {
-      let message = "Expecting '" + legalToken + "', found '" + this._currentToken + "'.";
-      this._syntaxError(message);
+    this.scanFeed();
+    if (this.currentToken !== legalToken) {
+      let message = "Expecting '" + legalToken + "', found '" + this.currentToken + "'.";
+      this.syntaxError(message);
     }
+    this.tokenArray.shift();
+    this.hwOutput("Call Match(" + legalToken + ")");    
     log.debug ("Match(",legalToken,") called... and matched!");
+  }
+  
+  //Output the process in a readable way
+  hwOutput(call/*: string */) {
+    let input = this.tokenArrayString();
+    log.verbose(pad(call,32),pad(input,64,true));
+    var o = {call:call, input:input, code:this.semantic.codeLines.join('\n')};
+    this.totalOutput.push(o);
   }
   
   /*
    * Doesn't do much but log an error.
    * IN:  message is a string to display in the log.
    */
-  _syntaxError(message) {
+  syntaxError(message) {
     log.error("Syntax Error:",message);
     throw message;
   }
@@ -102,8 +129,8 @@ class Parser {
    * OUT: the token as string if it is in the table,
    *      otherwise return undefined.
    */
-  _checkSymbol(checkToken) {
-    for (let token in this._validTokens) {
+  checkSymbol(checkToken) {
+    for (let token in this.validTokens) {
       if (token == this.match(checkToken)) {
         return token;
       }
@@ -113,48 +140,54 @@ class Parser {
   
   //The main method of the class, that starts the parsing process.
   parse() {
-    if (this._readable === undefined) {
-      log.error("No Readable: Cannot find stream for the scanner to work against.");
-      return;
-    }
-    log.verbose("<system goal>");
-    this._systemGoal();
-    return this._parseSuccess;
+    
+    this.hwOutput("Call SystemGoal");    
+    this.systemGoal();
+    
+    return this.parseSuccess;
   }
 
   //Grammar statement  
-  _systemGoal() {
-    log.verbose("14 -> <program>$");
-    this._program();
+  systemGoal() {
+    this.hwOutput("Call Program");    
+    this.program();
+
     this.match("EofSym");
-    this._semantic.finish();
+
+    this.semantic.finish();
+    this.hwOutput("Call Finish");     
   }
   
   //Grammar statement  
-  _program() {
-    log.verbose("1  -> begin <statementList> end$");
-    this._semantic.start();
+  program() {
+    //the procedure "Start" is implied in the creation of the Semantic object.
+    this.hwOutput("Call Start");     
+    
     this.match("BeginSym");
-    this._statementList();
+    
+    this.hwOutput("Call StatementList");     
+    this.statementList();
+    
     this.match("EndSym");
   }
   
   //Grammar statement  
-  _statementList() {
-    log.verbose("2  -> Id :=<statement> ;");
-    this._statement();
-    switch (this._nextToken) {
+  statementList() {
+    this.hwOutput("Call Statement");
+    this.statement();
+    
+    switch (this.nextToken) {
       case "Id":
-        log.verbose("2  -> Id := <statementList> ;");
-        this._statementList();
+        this.hwOutput("Call StatementList");         
+        this.statementList();
         break;
       case "ReadSym":
-        log.verbose("2  -> Id := <statementList> ;");
-        this._statementList();
+        this.hwOutput("Call StatementList");         
+        this.statementList();
         break;
       case "WriteSym":
-        log.verbose("2  -> Id := <statementList> ;");
-        this._statementList();
+        this.hwOutput("Call StatementList");         
+        this.statementList();
         break;
       default:
         return;
@@ -162,120 +195,197 @@ class Parser {
   }
   
   //Grammar statement  
-  _statement() {
-    switch (this._nextToken) {
+  statement(expressionLevel = 1) {
+    
+    switch (this.nextToken) {
       case "Id":
-        log.verbose("3  -> Id :=<expression> ;");
-        this._ident();
+        this.hwOutput("Call Ident");         
+        let identifier = this.ident();
+   
         this.match("AssignOp");
-        this._expression();
+   
+        let expressionLevel = 1;
+        this.hwOutput("Call Expression["+(expressionLevel + 1)+"]");         
+        let expr = this.expression(expressionLevel + 1);
+   
         this.match("SemiColon");
-        //this._semantic.assign(targetexpressionRecord,sourceexpressionRecord);
+        
+        this.semantic.assign(identifier,expr);
+        this.hwOutput("Call Expression["+expressionLevel+"]");         
+        
         break;
       case "ReadSym":
-        log.verbose("4  -> read(<idList>) ;");
         this.match("ReadSym");
+   
         this.match("LParen");
-        this._idList();
+   
+        this.hwOutput("Call IdList");         
+        this.idList();
+   
         this.match("RParen");
+   
         this.match("SemiColon");
         break;
       case "WriteSym":
-        log.verbose("5  -> write(<idList>) ;");
         this.match("WriteSym");
+   
         this.match("LParen");
-        this._expressionList();
+   
+        this.hwOutput("Call ExpressionList");         
+        this.expressionList();
+   
         this.match("RParen");
+   
         this.match("SemiColon");
         break;
       default:
-        this._syntaxError("Fallthrough on 'statement'. No operation found for " + this._nextToken);
+        this.syntaxError("Fallthrough on 'statement'. No operation found for " + this.nextToken);
     }
   }
   
   //Grammar statement  
-  _idList() {
-    log.verbose("6  -> Id ;");
-    this._ident();
+  idList() {
+    this.hwOutput("Call Ident");
+    var result = this.ident();
+   
     //call readId with whatever is in the scanner expression record
-    this._semantic.readId(this._scanner._expressionRecord);
-    if (this._nextToken === "Comma") {
+    this.semantic.readId(this.scanner.expressionRecord);
+    this.hwOutput("ReadId");
+    
+    if (this.nextToken === "Comma") {
       this.match("Comma");
-      this._idList();
+   
+      this.hwOutput("Call IdList");       
+      this.idList();
+   
     } else {
       return;
     }
   }
   
   //Grammar statement  
-  _expressionList() {
-    log.verbose("7  -> <expr list> ;");
-    this._expression();
-    if (this._nextToken === "Comma") {
+  expressionList() {
+    this.hwOutput("Call Expression");
+    this.expression();
+    
+    if (this.nextToken === "Comma") {
+      
       this.match("Comma");
-      this._expressionList();
+      
+      this.hwOutput("Call ExpressionList");       
+      this.expressionList();
+      
     } else {
       return;
     }
   }
   
   //Grammar statement  
-  _expression() {
-    log.verbose("8  -> <expression>");
-    this._primary();
-    if (this._nextToken === "PlusOp" || this._nextToken === "MinusOp") {
-      log.verbose("8  -> <primary><add op><expression>");
-      this._addOp();
-      this._expression();
+  expression(expressionLevel = 1) {
+    this.hwOutput("Call Primary");     
+    
+    let leftOperand = this.primary();
+
+    if (this.nextToken === "PlusOp" || this.nextToken === "MinusOp") {
+
+      this.hwOutput("Call AddOp");     
+
+      let op = this.addOp();
+
+      this.hwOutput("Call Expression["+(expressionLevel + 1) +"]");
+      let rightOperand = this.expression(expressionLevel + 1);
+      this.hwOutput("Return from Expression["+(expressionLevel + 1) +"]");     
+
+      return this.semantic.genInfix(leftOperand, op, rightOperand);
     } else {
-      return;
+      return leftOperand;
     }
+
   }
   
   //Grammar statement  
-  _primary() {
-    switch(this._nextToken) {
+  primary(expressionLevel = 1) {
+    var result;
+    switch(this.nextToken) {
       case "LParen":
-        log.verbose("9  -> (<expression>)");
+
         this.match("LParen");
-        this._expression();
+
+        this.hwOutput("Call Expression["+(expressionLevel + 1) +"]");
+        result = this.expression(expressionLevel + 1);
+        this.hwOutput("Return from Expression["+(expressionLevel + 1) +"]");     
+
         this.match("RParen");
+
         break;
       case "Id":
-        log.verbose("9  -> Id");
-        this._ident();
+        
+        this.hwOutput("Call Ident");
+        result = this.ident();
+
         break;
       case "IntLiteral":
-        log.verbose("9  -> IntLiteral");
+        
         this.match("IntLiteral");
+        result = this.semantic.processLiteral(this.scanner.readToken);
+
         break;
       default:
-        this._syntaxError("Fallthrough on 'primary'. No operation found for " + this._nextToken);
+        this.syntaxError("Fallthrough on 'primary'. No operation found for " + this.nextToken);
     }
+    return result;
   }
   
   //Grammar statement  
-  _ident() {
+  ident() {
+    
     this.match("Id");
-    this._semantic.processId(this._scanner._expressionRecord);
+
+    let result = this.semantic.processId(this.scanner.readToken);
+    this.hwOutput("Call ProcessId");
+    
+    return result;
+
   }
   
   //Grammar statement  
-  _addOp() {
-    switch(this._nextToken) {
+  addOp() {
+    var result;
+    switch(this.nextToken) {
       case "PlusOp":
-        log.verbose("12 -> PlusOp");
+        
         this.match("PlusOp");
+        result = this.semantic.processOp("PlusOp");
+        this.hwOutput("Call ProcessOp");
+      
         break;
       case "MinusOp":
-        log.verbose("12 -> MinusOp");
+        
         this.match("MinusOp");
+        result = this.semantic.processOp("MinusOp");
+        this.hwOutput("Call ProcessOp");
+
         break;
       default:
-        this._syntaxError("Fallthrough on 'primary'. No operation found for " + this._nextToken);
+        this.syntaxError("Fallthrough on 'primary'. No operation found for " + this.nextToken);
     }
+    return result;
   }
 
+}
+
+//thank you, http://stackoverflow.com/questions/2686855/is-there-a-javascript-function-that-can-pad-a-string-to-get-to-a-determined-leng
+function pad(str, len, padLeft = false) {
+  //create string of len spaces long
+  let pad = Array(len).join(' ');
+  if (typeof str === 'undefined') { 
+    return pad;
+  }
+  if (padLeft) {
+    return (pad + str).slice(-pad.length);
+  } else {
+    return (str + pad).substring(0, pad.length);
+  }
 }
 
 module.exports = Parser;

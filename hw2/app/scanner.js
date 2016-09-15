@@ -8,9 +8,7 @@
 
 var log = require('winston');
 var Readable = require('stream').Readable;
-var types = require('./types.js');
-log.level = "verbose";
-
+log.level = "info";
 
 class Scanner {
 
@@ -19,41 +17,41 @@ class Scanner {
   //IN:  an object of valid tokens
   constructor(readableInput, validTokens) {
     
-    log.debug("Constructing scanner...");
-
-    this._expressionRecord = undefined;
-    this._readable = new Readable();
-    this._tokenBuffer = "";
+    this.readable = new Readable();
+    
+    this.tokenBuffer = "";
+    this.readToken = "";
 
     if (validTokens === undefined) {
       throw "Scanner: A set of valid tokens must be provided";
     }
     
-    this._validTokens = validTokens;
+    this.validTokens = validTokens;
     
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
-      this._readable.push(readableInput);
+      this.readable.push(readableInput);
       //add EOF to the stream... very important to end the stream!
-      this._readable.push(null);
+      this.readable.push(null);
     } else if (readableInput instanceof Readable) {
-      this._readable = readableInput;
+      this.readable = readableInput;
     } else {
-      log.error("No suitable input to scan.");
+      throw("Scanner: No suitable input to scan.");
     }
-    this._tokenBuffer = "";
+    this.tokenBuffer = "";
   }
 
   //Adds its argument to a character buffer called [tokenBufferSymbol]
   //IN:  currentChar is a character to be added to the token buffer.
-  _bufferChar(currentChar) {
+  bufferChar(currentChar) {
     if (currentChar !== undefined) {
-      this._tokenBuffer += currentChar;
+      this.tokenBuffer += currentChar;
     }
   }
 
   //Resets the buffer to the empty string
-  _clearBuffer() {
-    this._tokenBuffer = "";
+  clearBuffer() {
+    this.readToken = this.tokenBuffer;
+    this.tokenBuffer = "";
   }
 
   //Takes the identifiers as they are recognized and returns
@@ -61,8 +59,8 @@ class Scanner {
   //IN:  checkString is the identifier to be checked
   //OUT: returns the token as string or "BOGUS" if not found
   checkReserved(checkString) {
-    for (var token in this._validTokens) {
-      if (this._validTokens[token] == checkString) {
+    for (var token in this.validTokens) {
+      if (this.validTokens[token] == checkString) {
         return token;
       }
     }
@@ -72,8 +70,8 @@ class Scanner {
   //pick off a single character and return it
   //OUT: returns a character if found from the stream,
   //     otherwise undefined.
-  _readChar() {
-    var char = this._readable.read(1);
+  readChar() {
+    var char = this.readable.read(1);
     if (char !== null) {
       return char;
     }
@@ -81,14 +79,14 @@ class Scanner {
 
   //put a character back if we've read too far
   //IN:  char is a single character to put back in the stream.
-  _writeChar(char) {
-    this._readable.unshift(char);
+  writeChar(char) {
+    this.readable.unshift(char);
   }
 
   //An error function
   //IN:  currentChar is the offending character that can't be parsed
   //OUT: log an error message
-  _lexicalError(currentChar) {
+  lexicalError(currentChar) {
     log.error("character " + currentChar + " could not be parsed.");
   }
 
@@ -97,11 +95,11 @@ class Scanner {
   //OUT: returns a single token
   scan() {
   
-      this._clearBuffer();
+      this.clearBuffer();
       var char;
       
       //loop through until stream has no more characters.
-      while ((char = this._readChar()) !== undefined) {
+      while ((char = this.readChar()) !== undefined) {
         
         if (char === undefined) {
           //end of stream == end of file
@@ -112,18 +110,17 @@ class Scanner {
   
         } else if (/^[a-z]/i.test(char)) {
           //looking for IDs
-          this._bufferChar(char);
-          while( (char = this._readChar()) !== undefined && /^[A-Za-z0-9_]/.test(char)) {
-            this._bufferChar(char);
+          this.bufferChar(char);
+          while( (char = this.readChar()) !== undefined && /^[A-Za-z0-9_]/.test(char)) {
+            this.bufferChar(char);
           }
-          this._writeChar(char);
+          this.writeChar(char);
   
           //check the token against the reserved words list.
           //if it's not in there, it's an Id.
-          let tempToken = this.checkReserved(this._tokenBuffer.toString());
+          let tempToken = this.checkReserved(this.tokenBuffer.toString());
           if (tempToken === undefined) {
-            log.debug("Testing '",this._tokenBuffer,"' ,which came back as",tempToken,". Making it an Id.");
-            this._expressionRecord = new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,this._tokenBuffer);
+            log.debug("Testing '",this.tokenBuffer,"' ,which came back as",tempToken,". It's an Id.");
             return this.checkReserved("ID");
           } else {
             return tempToken;
@@ -131,51 +128,50 @@ class Scanner {
   
         } else if (/^[0-9]/.test(char)) {
           //looking for integers here
-          this._bufferChar(char);
-          while( (char = this._readChar()) !== undefined && /^[0-9]/.test(char)) {
-            this._bufferChar(char);
+          this.bufferChar(char);
+          while( (char = this.readChar()) !== undefined && /^[0-9]/.test(char)) {
+            this.bufferChar(char);
           }
-          this._writeChar(char);
-          this._expressionRecord = new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,this._tokenBuffer);
+          this.writeChar(char);
           return this.checkReserved("INT");
 
         } else if (/[();,+=]/.test(char)) {
           //parens, semicolon, comma, and plus
-          return this.checkReserved(char);
+          return this.checkReserved(this.tokenBuffer = char.toString());
   
         } else if (/[:]/.test(char)) {
           //check the colon, looking for assignment oper
-          if ((char = this._readChar()) !== undefined && /[=]/.test(char)) {
-            return this.checkReserved(":=");
+          if ((char = this.readChar()) !== undefined && /[=]/.test(char)) {
+            return this.checkReserved(this.tokenBuffer = ":=");
           } else {
-            this._lexicalError(char);
+            this.lexicalError(char);
           }
-          this._writeChar(char);
+          this.writeChar(char);
   
         } else if (/[-]/.test(char)) {
           //check the dash which might be comment, might be minus
-          if (/[-]/.test(char = this._readChar())) {
+          if (/[-]/.test(char = this.readChar())) {
             //until the end of line
-            while( (char = this._readChar()) !== undefined && !/\n/.test(char)) {
+            while( (char = this.readChar()) !== undefined && !/\n/.test(char)) {
               //quietly swallow the comment
             }
           } else {
-            this._writeChar(char);
-            return this.checkReserved("-");
+            this.writeChar(char);
+            return this.checkReserved(this.tokenBuffer = "-");
           }
   
         } else if (/[*]/.test(char)) {
           //check the exponent
-          if ((char = this._readChar()) !== undefined && /[*]/.test(char)) {
-            return this.checkReserved("**");
+          if ((char = this.readChar()) !== undefined && /[*]/.test(char)) {
+            return this.checkReserved(this.tokenBuffer = "**");
           } else {
-            this._lexicalError(char);
+            this.lexicalError(char);
           }
-          this._writeChar(char);
+          this.writeChar(char);
   
         } else {
           //default if it gets to here
-          this._lexicalError(char);
+          this.lexicalError(char);
         }
   
       } //end while
