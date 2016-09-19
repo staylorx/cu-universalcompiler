@@ -246,10 +246,10 @@ class Parser {
   //Grammar statement  
   idList() {
     this.hwOutput("Call Ident");
-    var result = this.ident();
+    var identifier = this.ident();
    
     //call readId with whatever is in the scanner expression record
-    this.semantic.readId(this.scanner.expressionRecord);
+    this.semantic.readId(identifier);
     this.hwOutput("ReadId");
     
     if (this.nextToken === "Comma") {

@@ -7,7 +7,7 @@ var types = require("./types.js");
 /*
  * A class to build out semantic rules as output instructions.
  * ECMAScript 6 (NodeJS v6.5.0)
- * !!! Still a work in progress. :-)
+ * 15-SEP-2016
  * Stephen Taylor, University of Colorado Denver
  * staylorx@gmail.com
  */
@@ -123,16 +123,18 @@ class Semantic {
     return exprRec;
   }
 
+  //takes the name and returns a new ExpressionRecord
   processId(name) {
     this.checkId(name);
     return new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,name);
   }
   
+  //takes a literal integer value and returns an ExpressionRecord
   processLiteral(value) {
     return new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,parseInt(value,10));
   }
   
-  //OUT: OperatorRecord
+  //Take a plus/minus token and returns a new OperatorRecord
   processOp(token) {
     if (token === "PlusOp") {
       return new types.OperatorRecord(types.OperatorKind.PLUS_OP);      
@@ -141,6 +143,7 @@ class Semantic {
     }
   }
   
+  //finishing instruction. yay!
   finish() /*: string */ {
     let code = this.generate("Halt");
     this.codeLines.push(code);
