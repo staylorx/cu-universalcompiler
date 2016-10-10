@@ -13,15 +13,12 @@ class SymbolTable {
   }
   
   lookup(symbol) {
-    log.debug("Lookup up symbol, '" + symbol + "'...");
+    log.debug("SymbolTable: Lookup up symbol, '" + symbol );
     let up = false;
     for (let i in this.symbolTable) {
       if (this.symbolTable[i] === symbol) {
-        log.debug("... symbol is found.");
         up = true;
         break;
-      } else {
-        log.debug("... symbol is not found.");
       }
     }
     return up;
