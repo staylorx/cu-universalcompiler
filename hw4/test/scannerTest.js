@@ -11,7 +11,7 @@ var Scanner = require('../app/scanner.js');
 var log = require('winston');
 log.level = "verbose";
 
-describe('Scanner Tests as strings', function(){
+describe('NEW Scanner Tests as strings', function(){
 
   it('From HW#1, listing #1 involved scan.', function(){
     let programString = `

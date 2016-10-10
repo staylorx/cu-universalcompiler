@@ -31,9 +31,9 @@ var ValidTokens = {
   EofSym:     "EOF"
 };
 
-describe('Scanner Tests as strings', function(){
+describe('Old Scanner Tests as strings', function(){
 
-  it('For HW#4, Something new.', function(){
+  it('For HW#4, Something new for old scanner.', function(){
     let programString = `
         BEGIN --SOMETHING NEW
           X:= 15;
@@ -47,7 +47,7 @@ describe('Scanner Tests as strings', function(){
     assert(tokenString === "BeginSym Id AssignOp IntLiteral SemiColon Id AssignOp IntLiteral PlusOp Id MinusOp IntLiteral SemiColon EndSym EofSym");
   });
   
-  it('From HW#4, another new thing', function(){
+  it('From HW#4, another new thing for old scanner', function(){
     let programString = `
         BEGIN
           READ(OPT, A, B); 
