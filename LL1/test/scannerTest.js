@@ -11,7 +11,14 @@ var Scanner = require('../app/scanner.js');
 var log = require('winston');
 log.level = "verbose";
 
-describe('NEW Scanner Tests as strings', function(){
+xdescribe('NEW Scanner Tests as strings', function(){
+  
+  var reservedTokens = {
+    BeginSym:   "BEGIN",
+    EndSym:     "END",
+    ReadSym:    "READ",
+    WriteSym:   "WRITE"
+  };
 
   it('From HW#1, listing #1 involved scan.', function(){
     let programString = `
@@ -24,7 +31,7 @@ describe('NEW Scanner Tests as strings', function(){
         END
         `;
     log.info("========== Program #1.1 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString,reservedTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #1.1 tokens:\n",tokenString);
     assert(tokenString === "BeginSym ReadSym LParen Id Comma Id Comma Id Comma Id RParen SemiColon Id AssignOp Id PlusOp LParen Id MinusOp Id RParen MinusOp IntLiteral SemiColon Id AssignOp LParen LParen Id MinusOp LParen IntLiteral RParen PlusOp LParen Id PlusOp Id RParen RParen RParen MinusOp LParen IntLiteral MinusOp Id RParen SemiColon WriteSym LParen Id Comma Id PlusOp Id RParen SemiColon EndSym EofSym");
@@ -44,7 +51,7 @@ describe('NEW Scanner Tests as strings', function(){
         END --Phew, finally done.
         `;
     log.info("========== Program #1.2 listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString,reservedTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #1.2 tokens:\n",tokenString);
     assert(tokenString === "BeginSym ReadSym LParen Id Comma Id Comma Id RParen SemiColon ReadSym LParen Id Comma Id Comma Id RParen SemiColon Id PlusOp IntLiteral AssignOp LParen Id PlusOp Id RParen MinusOp LParen Id MinusOp Id RParen SemiColon Id AssignOp IntLiteral PlusOp IntLiteral PlusOp IntLiteral MinusOp LParen Id PlusOp Id RParen SemiColon WriteSym LParen Id Comma IntLiteral RParen SemiColon EndSym EofSym");
@@ -53,7 +60,7 @@ describe('NEW Scanner Tests as strings', function(){
   it('From HW#2, parser input.', function(){
     let programString = `BEGIN A := B +(72 - C); END`;
     log.info("========== Homework #2, scanner listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString,reservedTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Homework #2, scanner tokens:\n",tokenString);
     assert(tokenString === "BeginSym Id AssignOp Id PlusOp LParen IntLiteral MinusOp Id RParen SemiColon EndSym EofSym");
@@ -61,7 +68,14 @@ describe('NEW Scanner Tests as strings', function(){
 
 });
 
-describe('Scanner Tests for HW4, matched against old scanner', function(){
+xdescribe('Scanner Tests for HW4, matched against old scanner', function(){
+
+  var reservedTokens = {
+    BeginSym:   "BEGIN",
+    EndSym:     "END",
+    ReadSym:    "READ",
+    WriteSym:   "WRITE"
+  };
 
   it('For HW#4, Something new.', function(){
     let programString = `
@@ -71,7 +85,7 @@ describe('Scanner Tests for HW4, matched against old scanner', function(){
         END
         `;
     log.info("========== Program #4.2.a listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString,reservedTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #4.2.a tokens:\n",tokenString);
     assert(tokenString === "BeginSym Id AssignOp IntLiteral SemiColon Id AssignOp IntLiteral PlusOp Id MinusOp IntLiteral SemiColon EndSym EofSym");
@@ -86,10 +100,55 @@ describe('Scanner Tests for HW4, matched against old scanner', function(){
         END
         `;
     log.info("========== Program #4.2.b listing:\n",programString);
-    let scanner = new Scanner(programString);
+    let scanner = new Scanner(programString,reservedTokens);
     let tokenString = scanner.tokensAsString();
     log.info("========== Program #4.2.b tokens:\n",tokenString);
     assert(tokenString === "BeginSym ReadSym LParen Id Comma Id Comma Id RParen SemiColon ReadSym LParen Id Comma Id Comma Id RParen SemiColon WriteSym LParen Id Comma IntLiteral RParen SemiColon EndSym EofSym");
   });
   
 });
+
+describe('Scanning production info', function(){
+
+  var reservedTokens = {
+    BeginSym:   "begin",
+    EndSym:     "end",
+    ReadSym:    "Read",
+    WriteSym:   "Write"
+  };
+
+  it('#1.', function(){
+    let programString = `
+      <system goal> -> begin <program> end
+        `;
+    log.info("========== Production #1:\n",programString);
+    let scanner = new Scanner(programString,reservedTokens);
+    let tokenString = scanner.tokensAsString();
+    log.info("========== Production #1:\n",tokenString);
+    assert(tokenString === "NonTerminal Produces BeginSym NonTerminal EndSym EofSym");
+  });
+  
+  it('#2.', function(){
+    let programString = `
+      <primary tail>->Read(<expression>);
+        `;
+    log.info("========== Production #1:\n",programString);
+    let scanner = new Scanner(programString,reservedTokens);
+    let tokenString = scanner.tokensAsString();
+    log.info("========== Production #1:\n",tokenString);
+    assert(tokenString === "NonTerminal Produces ReadSym LParen NonTerminal RParen SemiColon EofSym");
+  });  
+  
+  it('#3.', function(){
+    let programString = `
+      <primary tail> -> λ
+    `;
+    log.info("========== Production #1:\n",programString);
+    let scanner = new Scanner(programString,reservedTokens);
+    let tokenString = scanner.tokensAsString();
+    log.info("========== Production #1:\n",tokenString);
+    assert(tokenString === "NonTerminal Produces Lambda EofSym");
+  });  
+  
+});
+

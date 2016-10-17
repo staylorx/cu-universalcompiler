@@ -8,7 +8,7 @@
 
 var log = require('winston');
 var Readable = require('stream').Readable;
-log.level = "verbose";
+log.level = "info";
 
 var Action = {
   ERROR:         8, //1000
@@ -25,24 +25,32 @@ var Action = {
 //currentState 5 has an "other" block which is useful if nothing matches at all,
 //otherwise this throws a couple of exceptions, one for no valid currentState,
 //the other is a character can't be matched and there is no valid 'other' path.
+//
+//The code field is to keep me straight in all of this, but also when I reach
+//an accepting (aka "terminal") state I have a name for that place.
 var bootstrapTable = {
   "0": { 
+    code: "StartState",
     states: {
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:1,action:Action.MOVE_APPEND},
+      "$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:1,action:Action.MOVE_APPEND},
       "0123456789":{state:2,action:Action.MOVE_APPEND},
       " ":{state:3,action:Action.MOVE_NOAPPEND},
-      "+":{state:14,action:Action.HALT_NOAPPEND},
-      "-":{state:4,action:Action.MOVE_NOAPPEND},
+      "+":{state:14,action:Action.HALT_APPEND},
+      "-":{state:4,action:Action.MOVE_APPEND},
       ":":{state:6,action:Action.MOVE_APPEND}, 
-      ",":{state:17,action:Action.HALT_NOAPPEND}, 
-      ";":{state:18,action:Action.HALT_NOAPPEND}, 
-      "(":{state:19,action:Action.HALT_NOAPPEND}, 
-      ")":{state:20,action:Action.HALT_NOAPPEND},
+      ",":{state:17,action:Action.HALT_APPEND}, 
+      ";":{state:18,action:Action.HALT_APPEND}, 
+      "(":{state:19,action:Action.HALT_APPEND}, 
+      ")":{state:20,action:Action.HALT_APPEND},
       "\t":{state:3,action:Action.MOVE_NOAPPEND}, 
-      "\n":{state:3,action:Action.MOVE_NOAPPEND} 
+      "\n":{state:3,action:Action.MOVE_NOAPPEND},
+      "<":{state:7,action:Action.MOVE_APPEND},
+      ">":{state:7,action:Action.MOVE_APPEND},
+      "λ":{state:24,action:Action.HALT_NOAPPEND},
     }
   },
   "1": { 
+    code: "LettersNumbersUnderscores",
     states: {
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:1,action:Action.MOVE_APPEND},
       "0123456789":{state:1,action:Action.MOVE_APPEND},
@@ -61,6 +69,7 @@ var bootstrapTable = {
     }
    },
   "2": { 
+    codes: "Numbers",
     states: {
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:12,action:Action.HALT_REUSE}, 
       "0123456789":{state:2,action:Action.MOVE_APPEND},
@@ -79,8 +88,9 @@ var bootstrapTable = {
     }
   },
   "3": {
+    codes: "EmptySpaces",
     states: {
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:13,action:Action.HALT_REUSE},
+      "$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:13,action:Action.HALT_REUSE},
       "0123456789":{state:13,action:Action.HALT_REUSE}, 
       " ":{state:3,action:Action.MOVE_NOAPPEND}, 
       "+":{state:13,action:Action.HALT_REUSE},
@@ -88,15 +98,18 @@ var bootstrapTable = {
       "=":{state:13,action:Action.HALT_REUSE},
       ":":{state:13,action:Action.HALT_REUSE},
       ",":{state:13,action:Action.HALT_REUSE},
+      "λ":{state:24,action:Action.HALT_NOAPPEND},
       ";":{state:13,action:Action.HALT_REUSE}, 
       "(":{state:13,action:Action.HALT_REUSE},
       ")":{state:13,action:Action.HALT_REUSE},
       "_":{state:13,action:Action.HALT_REUSE},
       "\t":{state:3,action:Action.MOVE_NOAPPEND}, 
-      "\n":{state:3,action:Action.MOVE_NOAPPEND} 
+      "\n":{state:3,action:Action.MOVE_NOAPPEND},
+      "<":{state:13,action:Action.HALT_REUSE},
     }
   },
   "4": { 
+    code: "DashStart",
     states: {
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:21,action:Action.HALT_REUSE},
       "0123456789":{state:21,action:Action.HALT_REUSE},
@@ -109,10 +122,12 @@ var bootstrapTable = {
       ";":{state:21,action:Action.HALT_REUSE},
       "(":{state:21,action:Action.HALT_REUSE},
       ")":{state:21,action:Action.HALT_REUSE}, 
-      "\n":{state:21,action:Action.HALT_NOAPPEND} 
+      "\n":{state:21,action:Action.HALT_NOAPPEND}, 
+      ">":{state:23,action:Action.HALT_NOAPPEND}, 
       }
   },
   "5": {
+    code: "CommentOrProduction",
     other: {state:5,action:Action.MOVE_NOAPPEND},
     states: {
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:5,action:Action.MOVE_NOAPPEND},
@@ -132,8 +147,17 @@ var bootstrapTable = {
     }
   },
   "6": {
+    code: "LooksLikeAnAssignOp",
     states: {
-      "=":{state:16,action:0} 
+      "=":{state:16,action:Action.HALT_APPEND} 
+    }
+  },
+  "7": {
+    code: "NonTerminal",
+    states: {
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:7,action:Action.MOVE_APPEND},
+      " ":{state:7,action:Action.MOVE_APPEND},
+      ">":{state:22,action:Action.HALT_APPEND}
     }
   },
   "11": { code: "Id", skip:false },
@@ -146,15 +170,10 @@ var bootstrapTable = {
   "18": { code: "SemiColon", skip:false },
   "19": { code: "LParen", skip:false },
   "20": { code: "RParen", skip:false },
-  "21": { code: "MinusOp", skip:false }
-};
-
-var ReservedTokens = {
-  BeginSym:   "BEGIN",
-  EndSym:     "END",
-  ReadSym:    "READ",
-  WriteSym:   "WRITE",
-  EofSym:     "EOF"
+  "21": { code: "MinusOp", skip:false },
+  "22": { code: "NonTerminal", skip:false },
+  "23": { code: "Produces", skip:false },
+  "24": { code: "Lambda", skip:false }
 };
 
 class Scanner {
@@ -162,9 +181,10 @@ class Scanner {
   //Sets the readable stream so the scanner can work on it.
   //IN:  readableInput is either a Readable or a {S,s}tring
   //IN:  an object of valid tokens
-  constructor(readableInput) {
+  constructor(readableInput, reservedTokens) {
     
     this.readable = new Readable();
+    this.readable.setEncoding('UTF8');
     
     this.tokenBuffer = "";
     
@@ -173,7 +193,7 @@ class Scanner {
     this.nextChar = " ";
 
     //TODO make this flexible by bringing these through the constructor
-    this.reservedTokens = ReservedTokens;
+    this.reservedTokens = reservedTokens;
     this.table = bootstrapTable;
 
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
@@ -230,7 +250,7 @@ class Scanner {
         return foundState.other;        
       } else {
         //no 'other' section. Bad juju
-        throw "Scanner lookupState: Cannot find character '"+character+"' in state table";
+        throw "Scanner lookupState: Cannot find character '"+character+"' in for state '" + currentState + "'";
       }
     
     } else {

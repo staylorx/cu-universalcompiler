@@ -35,7 +35,7 @@ xdescribe('Parser Tests', function(){
 
   it('Testing the Parser, example from the assignment.', function(){
     let programString = `begin A := BB + 314 + A; end`;
-    var parser = new Parser(programString, ValidTokens);
+    var parser = new Parser(programString, ValidTokens, "grammar1.txt");
     try {
       parser.parse();
       var w = fs.createWriteStream('out/hw3-1.txt');
@@ -59,7 +59,7 @@ xdescribe('Parser Tests', function(){
         Z := D + G;
         Y := Q + Z;
       end`;
-    var parser = new Parser(programString, ValidTokens);
+    var parser = new Parser(programString, ValidTokens, "grammar1.txt");
     try {
       parser.parse();
       var w = fs.createWriteStream('out/hw3-2.txt');

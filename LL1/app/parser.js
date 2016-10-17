@@ -1,11 +1,11 @@
 "use strict";
 
 var log = require('winston');
+var Grammar = require("./grammar.js");
 var Scanner = require("./scanner.js");
-var Semantic = require("./semantic.js");
 var Readable = require('stream').Readable;
 
-log.level = "verbose";
+log.level = "debug";
 
 /*
  * A class to parse tokens from the scanner.
@@ -24,12 +24,18 @@ class Parser {
   //Sets the readable stream so the scanner can work on it.
   //IN:  readableInput is either a Readable or a {S,s}tring
   //IN:  an object of valid tokens
-  constructor(readableInput, validTokens) {
+  constructor(readableInput, validTokens, grammarFile) {
     
     this.validTokens = validTokens;
     this.currentToken = "";
     this.nextToken = "";
     this.totalOutput = [];
+    this.consoleFlag = true;
+
+    if (grammarFile === undefined) {
+      throw "Parser: A grammar file is required.";
+    }    
+    this.grammar = new Grammar(grammarFile);
 
     if (validTokens === undefined) {
       throw "Parser: A set of valid tokens must be provided";
@@ -65,7 +71,7 @@ class Parser {
     //reload the scanner since we ate up the stream
     this.scanner = new Scanner(this.tokenArrayString(), this.validTokens);
     this.scanFeed();  //let's get this party started
-    this.semantic = new Semantic(true);
+    //this.semantic = new Semantic(true);
     
     //this is for the formatted output... it was left off to init the scanner.
     //it's put back on to be pretty.
@@ -106,12 +112,105 @@ class Parser {
     log.debug ("Match(",legalToken,") called... and matched!");
   }
   
-  //Output the process in a readable way
-  hwOutput(call/*: string */) {
-    let input = this.tokenArrayString();
-    log.verbose(pad(call,32),pad(input,64,true));
-    var o = {call:call, input:input, code:this.semantic.codeLines.join('\n')};
-    this.totalOutput.push(o);
+  genActions(symbolSet) {
+    //generate actions necessary to match x 
+    if (symbolSet.size === 0) {
+      this.generate("null"); 
+    } else {
+      for (const s of symbolSet) {
+        if (this.grammar.terminals.has(s)) {        
+          this.generate("    Match(",this.makeId(s),");" );
+        } else {
+          this.generate("    ",this.makeId(s),";");
+        }
+      }
+    }
+  }
+  
+  generate(...args) /*: string */ {
+    let s = args.join(" ");
+
+    if (this.consoleFlag) {
+      //"write" the generation out
+      console.log(s);
+    }
+    
+    //return it too so it can be tested easily
+    return s;
+  }
+
+  makeId(s /*: string */) {
+    
+    let self = this;
+
+    //just about maxed out on my want-to-know about js objects now.    
+    Object.getOwnPropertyNames(self.validTokens).forEach(function(val, idx, array) {
+      if (self.validTokens[val] === s) {
+        s = val;          
+      }
+    });
+    
+    //should fall through if it's not a token...
+    //check to see if it's a nonterm form
+    //Propercase the nonterminal with no spaces
+    let result = "";
+    if (s.match(/[\w ]+/g)) {
+      //strip the <> chars
+      let tempS = s.replace(/[<>]/g,"");
+      //split on space
+      let split = tempS.split(" ");
+      for (let x of split) {
+        result += x.charAt(0).toUpperCase() + x.slice(1);
+      }
+      s = result;
+    }
+    
+    return s;
+  }
+  
+  makeParsingProc(A) {
+    //LL1 table from grammar.productions
+    let firstId;
+    this.generate("procedure", this.makeId(A), "is"); 
+    this.generate("begin"); 
+    this.generate("  case NextToken is"); 
+    
+    for (const P of this.grammar.getProductions(A) ) {
+      this.generate("    when");  
+      firstId = true; 
+      
+      log.debug("parseTable = ",this.grammar.parseTable);
+      for (const xMap of this.grammar.parseTable) {
+        log.debug("Parser:",xMap);
+        //make sure we're at the correct non-Terminal
+        if (xMap[0] === P.LHS) {
+          //run through all the parse states
+          for (const x of xMap[1]) {
+            log.debug("Looking for x",x,"in xMap[1]",xMap[1]);
+            
+            //find the one that matches this production
+            if (x[1] === P.productionNumber) {
+              if (firstId) {
+                this.generate("    ",this.makeId(x[0]));
+                firstId = false; 
+              } else {
+                this.generate("    ","|", this.makeId(x[0]));
+              }
+            }
+          }
+        }        
+      } //for each terminal
+      
+      this.generate("    ","=>"); 
+      this.genActions(P.RHS);
+      
+    } //for each production
+    
+    this.generate("    when others => SyntaxError(NextToken);"); 
+    this.generate("  end case;"); 
+    this.generate("end",this.makeId(A),";");
+    this.generate("");
+
   }
   
   /*
@@ -140,252 +239,16 @@ class Parser {
   
   //The main method of the class, that starts the parsing process.
   parse() {
-    
-    this.hwOutput("Call SystemGoal");    
-    this.systemGoal();
+  
+    //TODO a thing? Maybe run through nonTerms?
+    for (const A of this.grammar.nonTerminals) {
+      this.makeParsingProc(A);
+    }
     
     return this.parseSuccess;
-  }
-
-  //Grammar statement  
-  systemGoal() {
-    this.hwOutput("Call Program");    
-    this.program();
-
-    this.match("EofSym");
-
-    this.semantic.finish();
-    this.hwOutput("Call Finish");     
-  }
-  
-  //Grammar statement  
-  program() {
-    //the procedure "Start" is implied in the creation of the Semantic object.
-    this.hwOutput("Call Start");     
     
-    this.match("BeginSym");
-    
-    this.hwOutput("Call StatementList");     
-    this.statementList();
-    
-    this.match("EndSym");
-  }
-  
-  //Grammar statement  
-  statementList() {
-    this.hwOutput("Call Statement");
-    this.statement();
-    
-    switch (this.nextToken) {
-      case "Id":
-        this.hwOutput("Call StatementList");         
-        this.statementList();
-        break;
-      case "ReadSym":
-        this.hwOutput("Call StatementList");         
-        this.statementList();
-        break;
-      case "WriteSym":
-        this.hwOutput("Call StatementList");         
-        this.statementList();
-        break;
-      default:
-        return;
-    }
-  }
-  
-  //Grammar statement  
-  statement(expressionLevel = 1) {
-    
-    switch (this.nextToken) {
-      case "Id":
-        this.hwOutput("Call Ident");         
-        let identifier = this.ident();
-   
-        this.match("AssignOp");
-   
-        let expressionLevel = 1;
-        this.hwOutput("Call Expression["+(expressionLevel + 1)+"]");         
-        let expr = this.expression(expressionLevel + 1);
-   
-        this.match("SemiColon");
-        
-        this.semantic.assign(identifier,expr);
-        this.hwOutput("Call Expression["+expressionLevel+"]");         
-        
-        break;
-      case "ReadSym":
-        this.match("ReadSym");
-   
-        this.match("LParen");
-   
-        this.hwOutput("Call IdList");         
-        this.idList();
-   
-        this.match("RParen");
-   
-        this.match("SemiColon");
-        break;
-      case "WriteSym":
-        this.match("WriteSym");
-   
-        this.match("LParen");
-   
-        this.hwOutput("Call ExpressionList");         
-        this.expressionList();
-   
-        this.match("RParen");
-   
-        this.match("SemiColon");
-        break;
-      default:
-        this.syntaxError("Fallthrough on 'statement'. No operation found for " + this.nextToken);
-    }
-  }
-  
-  //Grammar statement  
-  idList() {
-    this.hwOutput("Call Ident");
-    var identifier = this.ident();
-   
-    //call readId with whatever is in the scanner expression record
-    this.semantic.readId(identifier);
-    this.hwOutput("ReadId");
-    
-    if (this.nextToken === "Comma") {
-      this.match("Comma");
-   
-      this.hwOutput("Call IdList");       
-      this.idList();
-   
-    } else {
-      return;
-    }
-  }
-  
-  //Grammar statement  
-  expressionList() {
-    this.hwOutput("Call Expression");
-    this.expression();
-    
-    if (this.nextToken === "Comma") {
-      
-      this.match("Comma");
-      
-      this.hwOutput("Call ExpressionList");       
-      this.expressionList();
-      
-    } else {
-      return;
-    }
-  }
-  
-  //Grammar statement  
-  expression(expressionLevel = 1) {
-    this.hwOutput("Call Primary");     
-    
-    let leftOperand = this.primary();
-
-    if (this.nextToken === "PlusOp" || this.nextToken === "MinusOp") {
-
-      this.hwOutput("Call AddOp");     
-
-      let op = this.addOp();
-
-      this.hwOutput("Call Expression["+(expressionLevel + 1) +"]");
-      let rightOperand = this.expression(expressionLevel + 1);
-      this.hwOutput("Return from Expression["+(expressionLevel + 1) +"]");     
-
-      return this.semantic.genInfix(leftOperand, op, rightOperand);
-    } else {
-      return leftOperand;
-    }
-
-  }
-  
-  //Grammar statement  
-  primary(expressionLevel = 1) {
-    var result;
-    switch(this.nextToken) {
-      case "LParen":
-
-        this.match("LParen");
-
-        this.hwOutput("Call Expression["+(expressionLevel + 1) +"]");
-        result = this.expression(expressionLevel + 1);
-        this.hwOutput("Return from Expression["+(expressionLevel + 1) +"]");     
-
-        this.match("RParen");
-
-        break;
-      case "Id":
-        
-        this.hwOutput("Call Ident");
-        result = this.ident();
-
-        break;
-      case "IntLiteral":
-        
-        this.match("IntLiteral");
-        result = this.semantic.processLiteral(this.scanner.readToken);
-
-        break;
-      default:
-        this.syntaxError("Fallthrough on 'primary'. No operation found for " + this.nextToken);
-    }
-    return result;
-  }
-  
-  //Grammar statement  
-  ident() {
-    
-    this.match("Id");
-
-    let result = this.semantic.processId(this.scanner.readToken);
-    this.hwOutput("Call ProcessId");
-    
-    return result;
-
-  }
-  
-  //Grammar statement  
-  addOp() {
-    var result;
-    switch(this.nextToken) {
-      case "PlusOp":
-        
-        this.match("PlusOp");
-        result = this.semantic.processOp("PlusOp");
-        this.hwOutput("Call ProcessOp");
-      
-        break;
-      case "MinusOp":
-        
-        this.match("MinusOp");
-        result = this.semantic.processOp("MinusOp");
-        this.hwOutput("Call ProcessOp");
-
-        break;
-      default:
-        this.syntaxError("Fallthrough on 'primary'. No operation found for " + this.nextToken);
-    }
-    return result;
   }
 
-}
-
-//thank you, http://stackoverflow.com/questions/2686855/is-there-a-javascript-function-that-can-pad-a-string-to-get-to-a-determined-leng
-function pad(str, len, padLeft = false) {
-  //create string of len spaces long
-  let pad = Array(len).join(' ');
-  if (typeof str === 'undefined') { 
-    return pad;
-  }
-  if (padLeft) {
-    return (pad + str).slice(-pad.length);
-  } else {
-    return (str + pad).substring(0, pad.length);
-  }
 }
 
 module.exports = Parser;
