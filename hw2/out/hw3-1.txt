@@ -1,0 +1,126 @@
+Input:
+begin A := BB + 314 + A; end
+
+Detailed Output:
+| call                      | input                                | code                   |
+*********************************************************************************************
+| Call SystemGoal           | begin A := BB + 314 + A ; end EofSym |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Program              | begin A := BB + 314 + A ; end EofSym |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Start                | begin A := BB + 314 + A ; end EofSym |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(BeginSym)      | A := BB + 314 + A ; end EofSym       |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call StatementList        | A := BB + 314 + A ; end EofSym       |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Statement            | A := BB + 314 + A ; end EofSym       |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Ident                | A := BB + 314 + A ; end EofSym       |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(Id)            | := BB + 314 + A ; end EofSym         |                        |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call ProcessId            | := BB + 314 + A ; end EofSym         | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(AssignOp)      | BB + 314 + A ; end EofSym            | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Expression[2]        | BB + 314 + A ; end EofSym            | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Primary              | BB + 314 + A ; end EofSym            | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Ident                | BB + 314 + A ; end EofSym            | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(Id)            | + 314 + A ; end EofSym               | Declare A,Integer      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call ProcessId            | + 314 + A ; end EofSym               | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call AddOp                | + 314 + A ; end EofSym               | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(PlusOp)        | 314 + A ; end EofSym                 | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call ProcessOp            | 314 + A ; end EofSym                 | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Expression[3]        | 314 + A ; end EofSym                 | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Primary              | 314 + A ; end EofSym                 | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(IntLiteral)    | + A ; end EofSym                     | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call AddOp                | + A ; end EofSym                     | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(PlusOp)        | A ; end EofSym                       | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call ProcessOp            | A ; end EofSym                       | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Expression[4]        | A ; end EofSym                       | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Primary              | A ; end EofSym                       | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Ident                | A ; end EofSym                       | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(Id)            | ; end EofSym                         | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call ProcessId            | ; end EofSym                         | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Return from Expression[4] | ; end EofSym                         | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Return from Expression[3] | ; end EofSym                         | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(SemiColon)     | end EofSym                           | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+|                           |                                      | Declare Temp&2,Integer |
+|                           |                                      | ADD  BB,Temp&1,Temp&2  |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Expression[1]        | end EofSym                           | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+|                           |                                      | Declare Temp&2,Integer |
+|                           |                                      | ADD  BB,Temp&1,Temp&2  |
+|                           |                                      | Store Temp&2,A         |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(EndSym)        | EofSym                               | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+|                           |                                      | Declare Temp&2,Integer |
+|                           |                                      | ADD  BB,Temp&1,Temp&2  |
+|                           |                                      | Store Temp&2,A         |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Match(EofSym)        |                                      | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+|                           |                                      | Declare Temp&2,Integer |
+|                           |                                      | ADD  BB,Temp&1,Temp&2  |
+|                           |                                      | Store Temp&2,A         |
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Call Finish               |                                      | Declare A,Integer      |
+|                           |                                      | Declare BB,Integer     |
+|                           |                                      | Declare Temp&1,Integer |
+|                           |                                      | ADD  314,A,Temp&1      |
+|                           |                                      | Declare Temp&2,Integer |
+|                           |                                      | ADD  BB,Temp&1,Temp&2  |
+|                           |                                      | Store Temp&2,A         |
+|                           |                                      | Halt                   |
