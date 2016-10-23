@@ -43,6 +43,7 @@ var bootstrapTable = {
       "(":{state:19,action:Action.HALT_APPEND}, 
       ")":{state:20,action:Action.HALT_APPEND},
       "\t":{state:3,action:Action.MOVE_NOAPPEND}, 
+      "\r":{state:3,action:Action.MOVE_NOAPPEND},
       "\n":{state:3,action:Action.MOVE_NOAPPEND},
       "<":{state:7,action:Action.MOVE_APPEND},
       ">":{state:7,action:Action.MOVE_APPEND},
@@ -65,6 +66,7 @@ var bootstrapTable = {
       ")":{state:11,action:Action.HALT_REUSE}, 
       "_":{state:1,action:Action.MOVE_APPEND}, 
       "\t":{state:11,action:Action.HALT_NOAPPEND}, 
+      "\r":{state:11,action:Action.HALT_NOAPPEND},
       "\n":{state:11,action:Action.HALT_NOAPPEND} 
     }
    },
@@ -84,6 +86,7 @@ var bootstrapTable = {
       ")":{state:12,action:Action.HALT_REUSE}, 
       "_":{state:12,action:Action.HALT_REUSE},
       "\t":{state:12,action:Action.HALT_NOAPPEND},
+      "\r":{state:12,action:Action.HALT_NOAPPEND}, 
       "\n":{state:12,action:Action.HALT_NOAPPEND} 
     }
   },
@@ -104,6 +107,7 @@ var bootstrapTable = {
       ")":{state:13,action:Action.HALT_REUSE},
       "_":{state:13,action:Action.HALT_REUSE},
       "\t":{state:3,action:Action.MOVE_NOAPPEND}, 
+      "\r":{state:3,action:Action.MOVE_NOAPPEND},
       "\n":{state:3,action:Action.MOVE_NOAPPEND},
       "<":{state:13,action:Action.HALT_REUSE},
     }
@@ -122,6 +126,7 @@ var bootstrapTable = {
       ";":{state:21,action:Action.HALT_REUSE},
       "(":{state:21,action:Action.HALT_REUSE},
       ")":{state:21,action:Action.HALT_REUSE}, 
+      "\r":{state:21,action:Action.HALT_NOAPPEND}, 
       "\n":{state:21,action:Action.HALT_NOAPPEND}, 
       ">":{state:23,action:Action.HALT_NOAPPEND}, 
       }
@@ -142,8 +147,9 @@ var bootstrapTable = {
       "(":{state:5,action:Action.MOVE_NOAPPEND},
       ")":{state:5,action:Action.MOVE_NOAPPEND},
       "_":{state:5,action:Action.MOVE_NOAPPEND}, 
-      "\t":{state:5,action:0}, 
-      "\n":{state:15,action:0}
+      "\t":{state:5,action:Action.MOVE_NOAPPEND}, 
+      "\r":{state:15,action:Action.HALT_NOAPPEND},
+      "\n":{state:15,action:Action.HALT_NOAPPEND}
     }
   },
   "6": {
