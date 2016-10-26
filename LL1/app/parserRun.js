@@ -30,13 +30,9 @@ var ValidTokens = {
   EofSym:     "$"
 };
 
-let programString = `begin read (IN); OUT:= IN+100+1; write(OUT); end $ `;
+//let programString = `begin read (IN); OUT:= IN+100+1; write(OUT); end $ `;
+let programString = `begin A := BB + 314 + A; end $`;
 var parser = new Parser(programString, ValidTokens, "grammar1.txt");
+console.log(parser.tokenArrayString());
 
-parser.parse();
-//var w = fs.createWriteStream('out/hw4-1.txt');
-//w.write("Input:\n");
-//w.write(programString + "\n");
-//w.write("\nDetailed Output:\n")
-//w.write(stringTable.create(parser.totalOutput,{ headerSeparator: '*', rowSeparator: '~' }));
-//w.end();
+console.log("Finished");

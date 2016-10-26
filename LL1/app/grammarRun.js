@@ -6,6 +6,7 @@ var Grammar = require("./grammar.js");
 log.level = "debug";
 
 var grammar = new Grammar("grammar1.txt");
-console.log(grammar.productions);
-console.log(grammar.parseTable);
+console.log("Productions:",grammar.productions);
+console.log("Parse Table:",grammar.parseTable);
+console.log("T(<primary tail>,;)=:",grammar.T("<primary tail>",";"));
 log.info("Finished.");

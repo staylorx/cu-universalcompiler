@@ -193,6 +193,13 @@ class Grammar {
     
   }
   
+  //This gets used so much I figured why not make it exact
+  T(X,a) {
+    let xResult = this.parseTable.get(X);
+    let aResult = xResult.get(a);
+    return aResult;
+  }
+  
   fillFirstSet() {
     
     log.verbose("fillFirstSet");

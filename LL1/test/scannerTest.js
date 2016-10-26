@@ -11,7 +11,7 @@ var Scanner = require('../app/scanner.js');
 var log = require('winston');
 log.level = "verbose";
 
-xdescribe('NEW Scanner Tests as strings', function(){
+describe('NEW Scanner Tests as strings', function(){
   
   var reservedTokens = {
     BeginSym:   "BEGIN",
@@ -68,7 +68,7 @@ xdescribe('NEW Scanner Tests as strings', function(){
 
 });
 
-xdescribe('Scanner Tests for HW4, matched against old scanner', function(){
+describe('Scanner Tests for HW4, matched against old scanner', function(){
 
   var reservedTokens = {
     BeginSym:   "BEGIN",
