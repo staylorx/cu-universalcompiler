@@ -26,6 +26,21 @@ class ExpressionRecord {
   
 }
 
+class SemanticRecord {
+  constructor(opRec, exprRec, error, kind = SemanticKind.EXPR_REC) {
+    this.kind = kind;
+    if (opRec !== undefined) {
+      this.opRec = opRec;
+    } else if ( exprRec !== undefined ) {
+      this.exprRec = exprRec;
+    } else {
+      this.error = error;
+    }
+  }
+}
+
+
+
 var ExpressionKind ={
   ID_EXPR:     1,
   LITERAL_EXPR:2,
@@ -37,4 +52,10 @@ var OperatorKind = {
   MINUS_OP: 2
 };
 
-module.exports = { ExpressionRecord, OperatorRecord, ExpressionKind, OperatorKind };
+var SemanticKind = {
+  OP_REC:   1,
+  EXPR_REC: 2,
+  ERROR:    3
+};
+
+module.exports = { SemanticRecord, ExpressionRecord, OperatorRecord, ExpressionKind, OperatorKind, SemanticKind };

@@ -12,21 +12,13 @@ var readline = require('readline');
 var Scanner = require('./scanner.js');
 var stream = require('stream');
 var LineByLine = require('n-readlines');
-log.level = "debug";
+log.level = "info";
 
 class Grammar {
 
-  constructor(grammarFile /*: string */ ) {
+  constructor(grammarFile /*: string */, reservedTokens ) {
     
-    //TODO move this out of hardcode
-    this.reservedTokens = {
-      BeginSym:   "begin",
-      EndSym:     "end",
-      ReadSym:    "Read",
-      WriteSym:   "Write",
-      EofScan:    "$"
-    };
-    
+    this.reservedTokens = reservedTokens;
     this.productionNumber = 1;
     this.productions = new Map();
     this.nonTerminals = new Set();
@@ -78,11 +70,11 @@ class Grammar {
       while ((token = scanner.scan()) !== "EofSym") {
         if (token === "NonTerminal") {
           this.nonTerminals.add(scanner.tokenBuffer);
+          rhArray.push(scanner.tokenBuffer);
         } else {
-          this.terminals.add(scanner.tokenBuffer);
+          this.terminals.add(token);
+          rhArray.push(token);
         }
-        //push the symbol to the rhs array
-        rhArray.push(scanner.tokenBuffer);
       }
       //add the two sides to the productions map
       this.addProduction(lhSymbol,rhArray);
@@ -129,10 +121,9 @@ class Grammar {
         rhsDerivesLambda = true;      
         
         for (let i = 0; i < P.RHS.length; i++) {
-          if (P.RHS[i] === '') {
+          if (P.RHS[i] === 'Lambda') {
             self.derivesLambda[P.RHS[i]] = true;
           }
-          //console.log(self.derivesLambda[P.RHS[i]].derivesLambda);
           rhsDerivesLambda = rhsDerivesLambda && self.derivesLambda[P.RHS[i]];    
         }
         if (rhsDerivesLambda && !self.derivesLambda[P.LHS] ) {
@@ -194,10 +185,12 @@ class Grammar {
   }
   
   //This gets used so much I figured why not make it exact
+  //easily comes back as undefined if no production found
   T(X,a) {
     let xResult = this.parseTable.get(X);
-    let aResult = xResult.get(a);
-    return aResult;
+    if (xResult !== undefined) {
+      return xResult.get(a);
+    }
   }
   
   fillFirstSet() {
@@ -209,7 +202,7 @@ class Grammar {
     
     for (const A of this.nonTerminals) {
       if (this.derivesLambda[A]) {
-        this.firstSet.set(A, new Set(''));
+        this.firstSet.set(A, new Set(['Lambda']));
       } else {
         this.firstSet.set(A, new Set());
       }
@@ -257,9 +250,9 @@ class Grammar {
       let p = this.productions[i];
       log.debug("Calculating predictSet for",p);
       
-      if (this.firstSet.get(p.RHS[0]).has('') || this.firstSet.get(p.RHS[0]).size === 0) {
+      if (this.firstSet.get(p.RHS[0]).has('Lambda') || this.firstSet.get(p.RHS[0]).size === 0) {
         p.predictSet = this.followSet.get(p.LHS);
-        p.predictSet.delete('');
+        p.predictSet.delete('Lambda');
       } else {
         p.predictSet = this.firstSet.get(p.RHS[0]);
       }
@@ -286,7 +279,7 @@ class Grammar {
       this.followSet.set(A, new Set());
     }
     
-    this.followSet.get(startSymbol).add('');
+    this.followSet.get(startSymbol).add('Lambda');
     
     var notChanged = false;
     while (!notChanged) {
@@ -295,7 +288,7 @@ class Grammar {
       for (let i = 1; i < this.productionNumber; i++) {
         let p = this.productions[i];
         
-        log.verbose("Calculating followSet for",p);
+        log.debug("Calculating followSet for",p);
         
         const originalSet = cloneSet(this.followSet.get(p.LHS));
 
@@ -310,8 +303,8 @@ class Grammar {
             let computeFirst = this.firstSet.get(y);
             let unionedSet = unionSet(this.followSet.get(B),computeFirst);
             this.followSet.set(B, unionedSet);
-            this.followSet.get(B).delete('');
-            if (computeFirst === undefined || computeFirst.has('')) {
+            this.followSet.get(B).delete('Lambda');
+            if (computeFirst === undefined || computeFirst.has('Lambda')) {
               let unionedSet = unionSet(this.followSet.get(B),this.followSet.get(p.LHS));
               notChanged = isEqual(originalSet,unionedSet);
               this.followSet.set(B,unionedSet);
@@ -327,7 +320,7 @@ class Grammar {
   
   computeFirst(x) /*: Set */ {
     
-    log.verbose("computeFirst(",x,")");
+    log.debug("computeFirst(",x,")");
     
     let i = 0;
     let k = x.length;
@@ -335,22 +328,22 @@ class Grammar {
     let result = new Set();
     
     if (k === 0) {
-      result.add('');
+      result.add('Lambda');
     } else {
       
       let firstSetMinusLambda = this.firstSet.get(x[i]);
-      firstSetMinusLambda.delete('');
+      firstSetMinusLambda.delete('Lambda');
       result = unionSet(result,firstSetMinusLambda);
       
-      while (i < k && this.firstSet.get(x[i]).has('')) {
+      while (i < k && this.firstSet.get(x[i]).has('Lambda')) {
         i++;
         firstSetMinusLambda = this.firstSet.get(x[i]);
-        firstSetMinusLambda.delete('');
+        firstSetMinusLambda.delete('Lambda');
         result = unionSet(result,firstSetMinusLambda);
       }
       
-      if (i === k && this.firstSet.get(x[i]).has('')) {
-        result.add('');
+      if (i === k && this.firstSet.get(x[i]).has('Lambda')) {
+        result.add('Lambda');
       }
       
     }

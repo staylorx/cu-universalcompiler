@@ -1,11 +1,13 @@
 "use strict";
 
+var fs = require('fs');
 var log = require('winston');
 var Grammar = require("./grammar.js");
 var Scanner = require("./scanner.js");
+var Semantic = require("./semantic.js");
 var Readable = require('stream').Readable;
 
-log.level = "debug";
+log.level = "verbose";
 
 /*
  * A class to parse tokens from the scanner.
@@ -35,18 +37,32 @@ class Parser {
     this.totalOutput = [];
     this.consoleFlag = true;
     this.parseStack = [];
+    this.totalOutput = [];
+    this.semantic = new Semantic(true);
+    this.w8 = [];
+    this.w9 = [];
 
     if (grammarFile === undefined) {
       throw "Parser: A grammar file is required.";
     }    
-    this.grammar = new Grammar(grammarFile);
-
     if (validTokens === undefined) {
       throw "Parser: A set of valid tokens must be provided";
     }
     
+    //grammar tokens include the IntLiteral which in grammar
+    //is a kind of Id. Fun.
+    let grammarTokens = {
+      BeginSym:   "begin",
+      EndSym:     "end",
+      ReadSym:    "Read",
+      WriteSym:   "Write",
+      EndOfSym:    "$",
+      IntLiteral: "IntLiteral"
+    };
+    this.grammar = new Grammar(grammarFile, grammarTokens);
+
     //test for string or Readable
-    let readable
+    let readable;
     if (typeof(readableInput) == 'string' || readableInput instanceof String) {
       readable = new Readable();
       readable.push(readableInput);
@@ -61,31 +77,13 @@ class Parser {
       return;
     }
     
-    //dump out the tokens into an array.
-    //used for the homework output
     this.scanner = new Scanner(readable, this.validTokens);
-    this.tokenArray = [];
-    let token;
-    while ((token = this.scanner.scan()) !== "EofSym") {
-      this.tokenArray.push(this.scanner.tokenBuffer);
-    }
+    
+    //let's get this party started, prime
+    this.scanFeed();
 
-    log.debug("Starting the process with normalized:");
-
-    //reload the scanner since we ate up the stream
-    this.scanner = new Scanner(this.tokenArrayString(), this.validTokens);
-    this.scanFeed();  //let's get this party started
     //this.semantic = new Semantic(true);
     
-    //this is for the formatted output... it was left off to init the scanner.
-    //it's put back on to be pretty.
-    this.tokenArray.push("EofSym");
-
-  }
-  
-  //helper to normalize the tokenbuffer items
-  tokenArrayString() /* : string */ {
-    return this.tokenArray.join(" ");
   }
   
   /*
@@ -97,53 +95,96 @@ class Parser {
     log.debug("currentToken=",this.currentToken,"; nextToken=",this.nextToken);
   }
 
-  /*
-   * Call scanFeed to move the pointers along.
-   * Then checks the currentToken against what's legal.
-   * If it matches, then moves along quietly, 
-   * otherwise calls "syntaxError"
-   * IN:  legalToken is a string and the token to be checked.
-   */
-  match(legalToken) {
-    //get a token off the scanner
-    this.scanFeed();
-    if (this.currentToken !== legalToken) {
-      let message = "Expecting '" + legalToken + "', found '" + this.currentToken + "'.";
-      this.syntaxError(message);
-    }
-    this.tokenArray.shift();
-    this.hwOutput("Call Match(" + legalToken + ")");    
-    log.debug ("Match(",legalToken,") called... and matched!");
-  }
-  
   LLDriver() {
+    
     //Push the Start Symbol onto an empty stack  
+    //the semanticstack is managed in the symantic object...
+    //it's already started
     this.parseStack.push("<system goal>"); 
-    while (this.parseStack.length !== 0) {
+    this.scanFeed();
+
+    this.w8.push ("|" + pad("PREDICT",11)+"|"+pad("TOKEN",24)+"|"+"PARSE STACK");
+
+    while (this.parseStack.length !== 0 ) {
+      
       //let X be the top stack symbol; 
       let X = this.parseStack[0];
-      //let a be the current input token   
+      
+      //let a be the current input buffer
+      //TODO lots of impedence between the buffer, symbol, the token.
       let a = this.currentToken;
-      if (X in this.grammar.nonTerminals) {
+      
+      this.w9.push("X: " + X + "\n" + "PS: " + this.parseStack + "\n" + "SS: " + this.semantic.stack.toString() + "\n");
+      
+      if (this.grammar.nonTerminals.has(X)) {
         
-        if (this.grammar.T(X, a) === "X —> Y1Y2. . . Ym") {
+        this.w8.push("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(a + " " + this.nextToken + " ...",24) + "|" + this.parseStack.join(" ")          );
+        
+        if (this.grammar.T(X,a) !== undefined) {
+          
           //Expand nonterminal, replace X with Y1Y2. . . Ym on the stack. 
-          //Begin with Ym, then Ym-1, . . . , and Y1 will be on top of the stack.     
+          this.parseStack.shift();
+          
+          //lookup the production by the predict #
+          let P = this.grammar.productions[this.grammar.T(X,a)];
+          
+          let reverseY;
+          //Lambda is a magic word and has to be handled.
+          if (P.RHS.indexOf('Lambda') > -1) {
+            reverseY = [];
+          } else {
+            //Begin with Ym, then Ym-1, . . . , and Y1 will be on top of the stack.     
+            reverseY = [...P.RHS].reverse();
+          }
+          
+          for (let i = 0; i < reverseY.length; i++) {
+            this.parseStack.unshift(reverseY[i]);
+          }
+
+          let eop = this.semantic.stack.pushEOP([...P.RHS]);
+          this.parseStack.unshift(eop);
+
         } else {
-          //process syntax error   
+          this.syntaxError("LLDriver: Cannot work with nonTerminal",X);
         }
         
-      } else if (X in this.grammar.terminals) {    
+      } else if (this.grammar.terminals.has(X)) {   
+        
         if (X === a) {
           //Match of X worked     
-          this.parseStack.pop(1);
+          
+          this.w8.push("|" + 
+            pad("Match",11) + 
+            "|" + 
+            pad(a + " " + this.nextToken + " ...",24) + 
+            "|" + 
+            this.parseStack.join(" ")  
+          );
+        
+          this.semantic.stack.pushToken(a);
+          this.parseStack.shift();
           //Get next token    
-          this.scan();
+          this.scanFeed();
+        
         } else {
-          this.SyntaxError("what what?");
+          this.syntaxError("LLDriver: Cannot work with terminal",X);
         } //end if;   
+        
+      } else if (X.eop) {
+        
+        this.semantic.stack.popEOP(X);
+        this.parseStack.shift();
+      
+      } else if (X.action) {
+
+        this.parseStack.shift();
+        //TODO call semantic routine for X
+        
       } //end if; 
     } //end while 
+    
+    this.w8.push ("|" + pad("Done",11) + "|" + pad(" ",24) + "|" + this.parseStack.join(" "));
+
   } //end LLDriver 
 
   /*
@@ -155,21 +196,20 @@ class Parser {
     throw message;
   }
   
-  /*
-   * Helper method to check the token object for legal tokens.
-   * IN:  checkToken, a string to be looked up in the object.
-   * OUT: the token as string if it is in the table,
-   *      otherwise return undefined.
-   */
-  checkSymbol(checkToken) {
-    for (let token in this.validTokens) {
-      if (token == this.match(checkToken)) {
-        return token;
-      }
-    }
-    return undefined;
-  }
+}
 
+//thank you, http://stackoverflow.com/questions/2686855/is-there-a-javascript-function-that-can-pad-a-string-to-get-to-a-determined-leng
+function pad(str, len, padLeft = false) {
+  //create string of len spaces long
+  let pad = Array(len).join(' ');
+  if (typeof str === 'undefined') { 
+    return pad;
+  }
+  if (padLeft) {
+    return (pad + str).slice(-pad.length);
+  } else {
+    return (str + pad).substring(0, pad.length);
+  }
 }
 
 module.exports = Parser;
