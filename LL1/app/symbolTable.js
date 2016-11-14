@@ -6,14 +6,20 @@ log.level = "info";
 class SymbolTable {
 
   constructor(maxSymbolSize = 1024) {
-    log.verbose("SymbolTable: Creating symbol table of size",maxSymbolSize);
+    log.verbose("[SymbolTable] Creating symbol table of size",maxSymbolSize);
     this.maxSymbol = maxSymbolSize;
     this.symbolTable = new Array(maxSymbolSize);
     this.lastSymbol = 0;
+    
+    log.verbose("###################################");
+    log.verbose("#");
+    log.verbose("# SymbolTable has been constructed.");
+    log.verbose("#");
+    log.verbose("###################################");
   }
   
   lookup(symbol) {
-    log.debug("SymbolTable: Lookup up symbol, '" + symbol );
+    log.debug("[SymbolTable] Lookup up symbol, '" + symbol );
     let up = false;
     for (let i in this.symbolTable) {
       if (this.symbolTable[i] === symbol) {
@@ -25,7 +31,7 @@ class SymbolTable {
   }
   
   enter(symbol) {
-    log.debug("Entering symbol, '" + symbol + "' to table.");
+    log.debug("[SymbolTable] Entering symbol, '" + symbol + "' to table.");
     if (this.lastSymbol < this.maxSymbol) {
       
       //I don't need to ensure this array is unique
@@ -43,7 +49,7 @@ class SymbolTable {
   }
   
   symbolTableOverflow() {
-      log.error("The symbol table is not large enough.");
+      log.error("[SymbolTable] The symbol table is not large enough.");
       throw "SymbolTableOverflow";
   }
   

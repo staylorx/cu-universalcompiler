@@ -47,6 +47,7 @@ var bootstrapTable = {
       "\n":{state:3,action:Action.MOVE_NOAPPEND},
       "<":{state:7,action:Action.MOVE_APPEND},
       ">":{state:7,action:Action.MOVE_APPEND},
+      "#":{state:8,action:Action.MOVE_APPEND},
       "λ":{state:24,action:Action.HALT_NOAPPEND},
     }
   },
@@ -109,6 +110,7 @@ var bootstrapTable = {
       "\t":{state:3,action:Action.MOVE_NOAPPEND}, 
       "\r":{state:3,action:Action.MOVE_NOAPPEND},
       "\n":{state:3,action:Action.MOVE_NOAPPEND},
+      "#":{state:8,action:Action.MOVE_APPEND},
       "<":{state:13,action:Action.HALT_REUSE},
     }
   },
@@ -166,6 +168,26 @@ var bootstrapTable = {
       ">":{state:22,action:Action.HALT_APPEND}
     }
   },
+  "8": {
+    code: "ActionSymbol",
+    states: {
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:8,action:Action.MOVE_APPEND},
+      "0123456789":{state:8,action:Action.MOVE_APPEND},
+      " ":{state:25,action:Action.HALT_NOAPPEND},
+      "(":{state:9,action:Action.MOVE_APPEND},
+    }
+  },
+  "9": {
+    code: "ActionSymbolParens",
+    states: {
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ":{state:9,action:Action.MOVE_APPEND},
+      "0123456789":{state:9,action:Action.MOVE_APPEND},
+      " ":{state:9,action:Action.MOVE_APPEND},
+      "$":{state:9,action:Action.MOVE_APPEND},
+      ",":{state:9,action:Action.MOVE_APPEND},
+      ")":{state:25,action:Action.HALT_APPEND}
+    }
+  },
   "11": { code: "Id", skip:false },
   "12": { code: "IntLiteral", skip:false },
   "13": { code: "EmptySpace", skip:true },
@@ -179,7 +201,8 @@ var bootstrapTable = {
   "21": { code: "MinusOp", skip:false },
   "22": { code: "NonTerminal", skip:false },
   "23": { code: "Produces", skip:false },
-  "24": { code: "Lambda", skip:false }
+  "24": { code: "Lambda", skip:false },
+  "25": { code: "Action", skip:false }
 };
 
 class Scanner {
@@ -209,12 +232,18 @@ class Scanner {
     } else if (readableInput instanceof Readable) {
       this.readable = readableInput;
     } else {
-      throw("Scanner: No suitable input to scan.");
+      throw("[Scanner] No suitable input to scan.");
     }
     this.tokenBuffer = "";
     
     //get this party started... seed the nextChar
     this.consumeChar();
+    
+    log.verbose("###############################");
+    log.verbose("#");
+    log.verbose("# Scanner has been constructed.");
+    log.verbose("#");
+    log.verbose("###############################");
   }
 
   //Looks up reserved tokens
@@ -256,11 +285,11 @@ class Scanner {
         return foundState.other;        
       } else {
         //no 'other' section. Bad juju
-        throw "Scanner lookupState: Cannot find character '"+character+"' in for state '" + currentState + "'";
+        throw "[Scanner] lookupState: Cannot find character '"+character+"' in for state '" + currentState + "'";
       }
     
     } else {
-      throw "Scanner lookupState: Invalid State Provided";
+      throw "[Scanner] lookupState: Invalid State Provided";
     }
 
   }
@@ -275,7 +304,7 @@ class Scanner {
       //found a currentState... return the code
       return foundState;
     } else {
-      throw "Scanner lookupState: Invalid State Provided";
+      throw "[Scanner] lookupState: Invalid State Provided";
     }
 
   }
@@ -297,7 +326,7 @@ class Scanner {
   //IN:  currentChar is the offending character that can't be parsed
   //OUT: log an error message
   lexicalError(currentChar) {
-    log.error("character " + currentChar + " could not be parsed.");
+    log.error("[Scanner] character " + currentChar + " could not be parsed.");
   }
   
   //Scanner recognizes micro identifiers and integer constances.
@@ -313,7 +342,7 @@ class Scanner {
     do {
       
       let actionBlock = this.lookupState(currentState,this.currentChar);
-      log.debug("CurrentState:",currentState,",CurrentChar:",this.currentChar,",NextChar:",this.nextChar,",ActionState:",actionBlock.state,",TokenBuffer:",this.tokenBuffer);
+      log.debug("[Scanner] CurrentState:",currentState,",CurrentChar:",this.currentChar,",NextChar:",this.nextChar,",ActionState:",actionBlock.state,",TokenBuffer:",this.tokenBuffer);
         
       switch (actionBlock.action) {
         case Action.ERROR:

@@ -8,30 +8,38 @@
 
 var Parser = require('../app/parser.js');
 var log = require('winston');
-log.level = "verbose";
+log.level = "debug";
 
-//made this configurable because with each assignment these change slightly
-let ValidTokens = {
+var reservedCodeTokens = {
   BeginSym:   "begin",
   EndSym:     "end",
   ReadSym:    "read",
   WriteSym:   "write",
-  EndOfSym:   "$"
+  EOfScan:    "$"
+};
+
+//grammar tokens include the IntLiteral which in grammar is a kind of Id. Fun.
+var reservedGrammarTokens = {
+  IntLiteral: "IntLiteral",
+  PlusOp:     "PlusOp",
+  MinusOp:    "MinusOp",
+  BeginSym:   "begin",
+  EndSym:     "end",
+  ReadSym:    "Read",
+  WriteSym:   "Write",
+  EOfScan:    "$"
 };
 
 //let programString = `begin read (IN); OUT:= IN+100+1; write(OUT); end $ `;
 let programString = "begin A := BB + 314 + A; end $";
-var parser = new Parser(programString, ValidTokens, "grammar1.txt");
+var parser = new Parser(programString, reservedGrammarTokens, reservedCodeTokens, "grammar2.txt");
+
 parser.LLDriver();
 
+console.log("==============");
 console.log("Output for HW8");
 for (let line of parser.w8) {
   console.log(line);
 }
-
-//console.log("Output for HW9");
-//for (let line of parser.w9) {
-//  console.log(line);
-//}
 
 console.log("Finished");

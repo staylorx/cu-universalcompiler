@@ -30,9 +30,15 @@ class Grammar {
 
     if (grammarFile !== undefined) {
       this.grammarReader(grammarFile);
-      this.fillParseTable();
+      //this.fillParseTable();
     }
     
+    log.verbose("###############################");
+    log.verbose("#");
+    log.verbose("# Grammar has been constructed.");
+    log.verbose("#");
+    log.verbose("###############################");
+
   } //end constructor
 
   grammarReader(grammarFile) {
@@ -52,8 +58,10 @@ class Grammar {
         break;
       }
       
+      log.verbose("[Grammar] Creating scanner");
       var scanner = new Scanner(line,this.reservedTokens);
       var rhArray = new Array();
+      var rhArray2 = new Array();
       
       //get the first token... which will be the lhs
       let token = scanner.scan();
@@ -63,21 +71,27 @@ class Grammar {
       //sanity check the second token which must be "->"
       token = scanner.scan();
       if (token !== "Produces") {
-        throw "The second token should be '->'";
+        throw "[Grammar] The second token should be '->'";
       }
       
       //scan through the rhs
+      //the first rhArray is used for calcing the parseTable
+      //the second rhArray has the action function in the array also
       while ((token = scanner.scan()) !== "EofSym") {
         if (token === "NonTerminal") {
           this.nonTerminals.add(scanner.tokenBuffer);
           rhArray.push(scanner.tokenBuffer);
+          rhArray2.push(scanner.tokenBuffer);
+        } else if (token === "Action") {
+          rhArray2.push(scanner.tokenBuffer);
         } else {
           this.terminals.add(token);
           rhArray.push(token);
+          rhArray2.push(token);
         }
       }
       //add the two sides to the productions map
-      this.addProduction(lhSymbol,rhArray);
+      this.addProduction(lhSymbol,rhArray,rhArray2);
       
     }
       
@@ -87,10 +101,11 @@ class Grammar {
    * Helper to add the left- and right-hand sides
    * to the productions Map.
    */
-  addProduction(lhSymbol /*: string*/ ,rhArray /*: Array */) {
+  addProduction(lhSymbol /*: string*/ ,rhArray /*: Array */, rhArray2) {
     var tempProd = {
       LHS: lhSymbol,
       RHS: rhArray,
+      RHSActions: rhArray2,
       productionNumber: this.productionNumber
     };
     this.productions[this.productionNumber++] = tempProd;
@@ -159,10 +174,28 @@ class Grammar {
     return result;
   }
   
+  getProductionByLHS(nonTerminal) {
+    for (let i = 1; i < this.productionNumber; i++) {
+      let P = this.productions[i];
+      if (P.LHS === nonTerminal) {
+        return P;
+      }
+    }
+  }
+  
+  getProductionById(id) {
+    for (let i = 1; i < this.productionNumber; i++) {
+      let P = this.productions[i];
+      if (P.productionNumber === id) {
+        return P;
+      }
+    }
+  }
+    
   //creates a map of arrays with the LL(1) parse table info.
   fillParseTable() {
 
-    log.verbose("fillParseTable");
+    log.verbose("[Grammar] fillParseTable");
 
     this.fillPredictSet();
     
@@ -195,7 +228,7 @@ class Grammar {
   
   fillFirstSet() {
     
-    log.verbose("fillFirstSet");
+    log.verbose("[Grammar] fillFirstSet");
 
     //wonderfully difficult to troubleshoot if you don't marklambda
     this.markLambda();
@@ -231,24 +264,24 @@ class Grammar {
         let originalSet = cloneSet(this.firstSet.get(p.LHS));
         let unionedSet = unionSet(originalSet,this.computeFirst(p.RHS));
 
+        log.debug("[Grammar] Set firstSet(",p.LHS,"to",unionedSet);
         this.firstSet.set(p.LHS, unionedSet);
         
         //exit when no changes?
         notChanged = isEqual(originalSet,unionedSet);
-        
       }
-    }
-  }
+    } //end while
+  } //end fillFirstSet
   
   fillPredictSet() {
     
-    log.verbose("fillPredictSet");
+    log.verbose("[Grammar] fillPredictSet");
 
     this.fillFollowSet();
     
     for (let i = 1; i < this.productionNumber; i++) {
       let p = this.productions[i];
-      log.debug("Calculating predictSet for",p);
+      log.debug("[Grammar] Calculating predictSet for",p);
       
       if (this.firstSet.get(p.RHS[0]).has('Lambda') || this.firstSet.get(p.RHS[0]).size === 0) {
         p.predictSet = this.followSet.get(p.LHS);
@@ -264,7 +297,7 @@ class Grammar {
   
   fillFollowSet(startSymbol) {
     
-    log.verbose("fillFollowSet");
+    log.verbose("[Grammar] fillFollowSet");
 
     if (startSymbol === undefined) {
       startSymbol = '<system goal>';
@@ -288,7 +321,7 @@ class Grammar {
       for (let i = 1; i < this.productionNumber; i++) {
         let p = this.productions[i];
         
-        log.debug("Calculating followSet for",p);
+        log.debug("[Grammar] Calculating followSet for",p);
         
         const originalSet = cloneSet(this.followSet.get(p.LHS));
 
@@ -320,8 +353,6 @@ class Grammar {
   
   computeFirst(x) /*: Set */ {
     
-    log.debug("computeFirst(",x,")");
-    
     let i = 0;
     let k = x.length;
     
@@ -347,6 +378,8 @@ class Grammar {
       }
       
     }
+    log.verbose("[Grammar] computeFirst(",x,")","returns",result);
+
     return result;
   }
 

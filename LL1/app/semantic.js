@@ -21,7 +21,7 @@ class Semantic {
   //IN:  consoleFlag is a boolean that determines if the generate will
   //     print to console or stdout. Defaults to false.
   constructor(consoleFlag = false ) {
-    log.debug("Constructing semantic...");
+    log.debug("[Semantic] Constructing semantic...");
     
     this.currentToken = "";  
     this.nextToken = "";  
@@ -40,7 +40,7 @@ class Semantic {
   //OUT: s is a string instruction
   generate(...args) /*: string */ {
     if (args.length < 1 || args.length > 4) {
-      throw "Argument count must be between 1 and 4.";
+      throw "[Semantic] Argument count must be between 1 and 4.";
     }
     let s = "";
     s = args[0];
