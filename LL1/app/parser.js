@@ -33,8 +33,6 @@ class Parser {
     
     this.validGrammarTokens = validGrammarTokens;
     this.validCodeTokens = validCodeTokens;
-    this.currentToken = "";
-    this.nextToken = "";
     this.totalOutput = [];
     this.consoleFlag = true;
     this.parseStack = [];
@@ -81,9 +79,6 @@ class Parser {
     // //read again to reset the scanner
     // this.scanner = new Scanner(this.tokenString, this.validCodeTokens);
     
-    //let's get this party started, prime
-    this.scanFeed();
-
     //this.semantic = new Semantic(true);
     
     log.verbose("##############################");
@@ -92,27 +87,24 @@ class Parser {
     log.verbose("#");
     log.verbose("##############################");
 
-    
   }
   
-  /*
-   * Helper method , useful to keep a pair of these since I can't peek ahead.
-   */
-  scanFeed() {
-    this.currentToken = this.nextToken;
-    this.nextToken = this.scanner.scan();
-    log.debug("[Parser] scanFeed(): currentToken='" + this.currentToken + "'; nextToken='" + this.nextToken + "'");
-  }
-
   LLDriver() {
     
     //Push the Start Symbol onto an empty stack  
     //the semanticstack is managed in the symantic object...
-    //it's already started
+    //it's already started with the system goal
+    
     this.parseStack.push("<system goal>"); 
-    this.scanFeed();
+    let currentToken = this.scanner.scan();
+    log.info('[Parser][HW9] Entry into the main loop "while not"');
+    log.info("[Parser][HW9] Input:", currentToken);
+    log.info("[Parser][HW9] PS:", this.getPrettyPrintParseStack());
+    log.info("[Parser][HW9] SS:", this.semantic.stack.stackToString());
+    log.info("[Parser][HW9] Indices:", this.semantic.stack.pointersToString());
+    log.info('[Parser][HW9] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
-    this.w8.push ("|" + pad("PREDICT",11)+"|"+pad("TOKEN",24)+"|"+"PARSE STACK");
+    // this.w8.push ("|" + pad("PREDICT",11)+"|"+pad("TOKEN",24)+"|"+"PARSE STACK");
 
     while (this.parseStack.length !== 0 ) {
       
@@ -121,24 +113,22 @@ class Parser {
       
       //let a be the current input buffer
       //TODO lots of impedence between the buffer, symbol, the token.
-      let a = this.currentToken;
+      let a = currentToken;
       
       this.w9.push("X: " + JSON.stringify(X) + "\n" + "PS: " + JSON.stringify(this.parseStack) + "\n" + "SS: " + JSON.stringify(this.semantic.stack.toString()) + "\n");
       
       if (this.grammar.nonTerminals.has(X)) {
         
         this.w8.push("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(a + " " + this.nextToken + " ...",24) + "|" + this.parseStack.join(" ")          );
+        log.debug("--------------------");
         log.debug ("[Parser][NonTerminal] X=",X);
         
         if (this.grammar.T(X,a) !== undefined) {
 
-          //Expand nonterminal, replace X with Y1Y2. . . Ym on the stack. 
-          this.parseStack.shift();
-          
           //lookup the production by the predict #
           let P = this.grammar.productions[this.grammar.T(X,a)];
-          log.debug ("[Parser][NonTerminal] T(X,a)=",this.grammar.T(X,a),"for a=",a,". RHSActions=",JSON.stringify(P.RHSActions));
           
+          //Push Ym ... Y1 on the parse stack
           let reverseY;
           //Lambda is a magic word and has to be handled.
           if (P.RHSActions.indexOf('Lambda') > -1) {
@@ -147,15 +137,25 @@ class Parser {
             //Begin with Ym, then Ym-1, . . . , and Y1 will be on top of the stack.     
             reverseY = [...P.RHSActions].reverse();
           }
-          
-          log.debug("[Parser][NonTerminal][ParseStack] Pushing RHS=",reverseY);
+
+          //Pop X from the parse stack
+          //Expand nonterminal, replace X with Y1Y2. . . Ym on the stack. 
+          this.parseStack.shift();
+
+          //push EOP on the parse stack
+          let eop = this.semantic.stack.pushEOP([...P.RHSActions]);
+          this.parseStack.unshift(eop);
+
           for (let i = 0; i < reverseY.length; i++) {
             this.parseStack.unshift(reverseY[i]);
           }
-          log.debug("[Parser][NonTerminal][ParseStack] After RHS push, stack=:",JSON.stringify(this.parseStack));
 
-          let eop = this.semantic.stack.pushEOP([...P.RHSActions]);
-          this.parseStack.unshift(eop);
+          log.info('[Parser][NonTerminal][HW9] T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
+          log.info("[Parser][NonTerminal][HW9] Input:", currentToken);
+          log.info("[Parser][NonTerminal][HW9] PS:", this.getPrettyPrintParseStack());
+          log.info("[Parser][NonTerminal][HW9] SS:", this.semantic.stack.stackToString());
+          log.info("[Parser][NonTerminal][HW9] Indices:", this.semantic.stack.pointersToString());
+          log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
           this.syntaxError("[Parser][NonTerminal] LLDriver T(X,a) is undefined, T(",JSON.stringify(X),",",a,")");
@@ -163,52 +163,82 @@ class Parser {
         
       } else if (this.grammar.terminals.has(X)) {   
 
+        log.debug("--------------------");
         log.debug ("[Parser][Terminal] X=",X);
 
         if (X === a) {
-          log.debug ("[Parser][Terminal] X=a=",a);
-      
-          this.w8.push("|" + 
-            pad("Match",11) + 
-            "|" + 
-            pad(a + " " + this.nextToken + " ...",24) + 
-            "|" + 
-            this.parseStack.join(" ")  
-          );
+        
+          // this.w8.push("|" + 
+          //   pad("Match",11) + 
+          //   "|" + 
+          //   pad(a + " " + this.nextToken + " ...",24) + 
+          //   "|" + 
+          //   this.parseStack.join(" ")  
+          // );
 
-          this.semantic.stack.pushToken(a);
-          log.debug ("[Parser][Terminal] push token a=",a);
+          //Copy token info from scanner into SS[currentIndex]
+          this.semantic.stack.setToken(this.scanner.tokenBuffer);
           
           this.parseStack.shift();
-          log.debug ("[Parser][Terminal][ParseStack] pop, stack=",JSON.stringify(this.parseStack));
 
           //Get next token    
-          this.scanFeed();
-        
+          currentToken = this.scanner.scan();
+
+          log.info('[Parser][Terminal][HW9] X = ' + X);
+          log.info("[Parser][Terminal][HW9] Input:", currentToken);
+          log.info("[Parser][Terminal][HW9] PS:", this.getPrettyPrintParseStack());
+          log.info("[Parser][Terminal][HW9] SS:", this.semantic.stack.stackToString());
+          log.info("[Parser][Terminal][HW9] Indices:", this.semantic.stack.pointersToString());
+          log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+
         } else {
           this.syntaxError("[Parser][Terminal] LLDriver: Cannot work with terminal",X);
         } //end if;   
         
       } else if (X.eop) {
         
-        log.debug ("[Parser][EOP] X is EOP,",JSON.stringify(X));
-
         this.semantic.stack.popEOP(X);
         this.parseStack.shift();
-      
-      } else if (X.indexOf("#") === 0) {
 
-        log.debug("[Parser][Action] X is Actiom, do a thing, X=",X);
+        log.info('[Parser][EOP][HW9] X = ' + X);
+        log.info("[Parser][EOP][HW9] Input:", currentToken);
+        log.info("[Parser][EOP][HW9] PS:", this.getPrettyPrintParseStack());
+        log.info("[Parser][EOP][HW9] SS:", this.semantic.stack.stackToString());
+        log.info("[Parser][EOP][HW9] Indices:", this.semantic.stack.pointersToString());
+        log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+
+      } else if (X.indexOf("#") === 0) {
 
         this.parseStack.shift();
         //TODO call semantic routine for X
+
+        log.info('[Parser][Action][HW9] X = ' + X);
+        log.info("[Parser][Action][HW9] Input:", currentToken);
+        log.info("[Parser][Action][HW9] PS:", this.getPrettyPrintParseStack());
+        log.info("[Parser][Action][HW9] SS:", this.semantic.stack.stackToString());
+        log.info("[Parser][Action][HW9] Indices:", this.semantic.stack.pointersToString());
+        log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
         
       } //end if; 
     } //end while 
     
-    this.w8.push ("|" + pad("Done",11) + "|" + pad(" ",24) + "|" + this.parseStack.join(" "));
+    // this.w8.push ("|" + pad("Done",11) + "|" + pad(" ",24) + "|" + this.parseStack.join(" "));
 
   } //end LLDriver 
+
+  getPrettyPrintParseStack() {
+    let s = "";
+    for (let X of this.parseStack) {
+      if (!X.eop) {
+        s += X + " ";
+      } else if (X.eop) {
+        s += "EOP(" + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ") ";
+      } else {
+        s += "BOGUS! ";
+      }
+    }
+    return s;
+  }
 
   /*
    * Doesn't do much but log an error.

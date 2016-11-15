@@ -23,14 +23,9 @@ class SemanticStack {
 
   }
   
-  currentItem() {
-    return this.stack[this.pointers.currentIndex - 1];
-  }
-  
-  pushToken(token /*: string */) {
-    this.stack[this.pointers.currentIndex] = token;
+  setToken(token /*: string */) {
+    this.stack[this.stack.length - this.pointers.currentIndex] = token;
     this.pointers.currentIndex++;
-    log.debug("[SemanticStack] pushToken('" + token + "'):stack=",JSON.stringify(this.stack),":pointers=",JSON.stringify(this.pointers));
   }
   
   //returns eop object
@@ -44,18 +39,24 @@ class SemanticStack {
       currentIndex: this.pointers.currentIndex,
       topIndex:     this.pointers.topIndex
     };
-    log.debug("[SemanticStack] Pushing EOP, symbols=",symbols,";stack=",JSON.stringify(this.stack));
+    log.debug("[SemanticStack] Pushing EOP, start stack=",this.stackToString(),"; start pointers=",this.pointersToString());
 
+    let noActionCount = 0;
     for (let i = 0; i < symbols.length; i++) {
-      this.stack.unshift(symbols[i]);
+      if (symbols[i].indexOf("#") === 0) {
+        //action symbol... skip quietly
+      } else {
+        this.stack.unshift(symbols[i]);
+        noActionCount++;
+      }
     }
 
     this.pointers.leftIndex = this.pointers.currentIndex;
     this.pointers.rightIndex = this.pointers.topIndex;
     this.pointers.currentIndex = this.pointers.rightIndex;
-    this.pointers.topIndex = this.pointers.topIndex + symbols.length;
-    log.debug("[SemanticStack] Pushing EOP, pointers=",JSON.stringify(this.pointers));
-  
+    this.pointers.topIndex = this.pointers.topIndex + noActionCount;
+    log.debug("[SemanticStack] Pushing EOP,   end stack=",this.stackToString(),"; start pointers=",this.pointersToString());
+
     return eop;
   }
 
@@ -77,14 +78,18 @@ class SemanticStack {
     
   }
   
-  toString() {
-    return this.stack.join(" ") + "(" + 
+  stackToString() {
+    return this.stack.join(" ");
+  }
+  
+  pointersToString() {
+    return "(" + 
     this.pointers.leftIndex + ","+
     this.pointers.rightIndex + ","+
     this.pointers.currentIndex + ","+ 
     this.pointers.topIndex + ")";
   }
-  
+
 }
 
 module.exports = SemanticStack;

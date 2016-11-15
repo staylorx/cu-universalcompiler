@@ -36,10 +36,10 @@ var parser = new Parser(programString, reservedGrammarTokens, reservedCodeTokens
 
 parser.LLDriver();
 
-console.log("==============");
-console.log("Output for HW8");
-for (let line of parser.w8) {
-  console.log(line);
-}
+// console.log("==============");
+// console.log("Output for HW8");
+// for (let line of parser.w8) {
+//   console.log(line);
+// }
 
 console.log("Finished");
