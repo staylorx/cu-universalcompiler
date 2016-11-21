@@ -10,16 +10,12 @@ var winston = require('winston');
 var log = new (winston.Logger)({
     transports: [
       new (winston.transports.Console)({
-        level: "debug",
+        level: "info",
         colorize: true,
         timestamp: false
       })
     ]
   });
-  
-//a couple very special loggers for homework
-var logHW8 = require('./lib/logger.js').logHW8;
-var logHW9 = require('./lib/logger.js').logHW9;
 
 /*
  * A class to parse tokens from the scanner.
@@ -51,6 +47,9 @@ class Parser {
     this.totalOutput = [];
     this.semantic = new Semantic(true);
     this.tokenArray = []; //used for homework output
+    this.tokenArrayLength;
+    this.hw8Lines = [];
+    this.hw9Lines = [];
 
     if (grammarFile === undefined) {
       throw "[Parser] A grammar file is required.";
@@ -89,6 +88,7 @@ class Parser {
     //be reused.
     let tokenString = this.scanner.tokensAsString(true);
     this.tokenArray = tokenString.split(" ");
+    this.tokenArrayLength = this.tokenArray.join(' ').length + 1;
     
     // //read again to reset the scanner
     this.scanner = new Scanner(tokenString, this.validCodeTokens);
@@ -109,14 +109,14 @@ class Parser {
     
     this.parseStack.push("<system goal>"); 
     let currentToken = this.scanner.scan();
-    logHW9.info('Entry into the main loop "while not"');
-    logHW9.info("Input:", currentToken);
-    logHW9.info("PS:", this.getPrettyPrintParseStack(true));
-    logHW9.info("SS:", this.semantic.stack.stackToString());
-    logHW9.info("Indices:", this.semantic.stack.pointersToString());
-    logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+    this.hw9Lines.push('Entry into the main loop "while not"');
+    this.hw9Lines.push("Input:" + currentToken);
+    this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+    this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
+    this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
+    this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
-    logHW8.info("|" + pad("PREDICT",11)+"|"+pad('INPUT CODE',40)+"|"+"PARSE STACK");
+    this.hw8Lines.push("|" + pad("PREDICT",11)+"|"+pad('INPUT CODE',this.tokenArrayLength)+"|"+"PARSE STACK");
 
     while (this.parseStack.length !== 0 ) {
       
@@ -128,7 +128,7 @@ class Parser {
       
       if (this.grammar.nonTerminals.has(X)) {
         
-        logHW8.info("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false) );
+        this.hw8Lines.push("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false) );
         log.debug ("[Parser][NonTerminal] X=",X);
         
         if (this.grammar.T(X,a) !== undefined) {
@@ -158,15 +158,15 @@ class Parser {
             this.parseStack.push(reverseY[i]);
           }
 
-          logHW9.info('T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
-          logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
-          logHW9.info("PS:", this.getPrettyPrintParseStack(true));
-          logHW9.info("SS:", this.semantic.stack.stackToString());
-          logHW9.info("Indices:", this.semantic.stack.pointersToString());
-          logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          this.hw9Lines.push('T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
+          this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
+          this.hw9Lines.push("PS:" +this.getPrettyPrintParseStack(true));
+          this.hw9Lines.push("SS:" +this.semantic.stack.stackToString());
+          this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
+          this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
-          this.syntaxError("[Parser][NonTerminal] LLDriver T(X,a) is undefined, T(",JSON.stringify(X),",",a,")");
+          this.syntaxError("[Parser][NonTerminal] LLDriver T(X,a) is undefined, T("+JSON.stringify(X)+","+a+")");
         }
         
       } else if (this.grammar.terminals.has(X)) {   
@@ -176,7 +176,7 @@ class Parser {
         if (X === a) {
         
           this.tokenArray.shift();
-          logHW8.info("|" + pad("Match",11) + "|" + pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false)   );
+          this.hw8Lines.push("|" + pad("Match",11) + "|" + pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false)   );
 
           //Copy token info from scanner into SS[currentIndex]
           this.semantic.stack.setToken(this.scanner.tokenBuffer);
@@ -186,15 +186,15 @@ class Parser {
           //Get next token    
           currentToken = this.scanner.scan();
 
-          logHW9.info('X = ' + X);
-          logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
-          logHW9.info("PS:", this.getPrettyPrintParseStack(true));
-          logHW9.info("SS:", this.semantic.stack.stackToString());
-          logHW9.info("Indices:", this.semantic.stack.pointersToString());
-          logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          this.hw9Lines.push('X = ' + X);
+          this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
+          this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+          this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
+          this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
+          this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
-          this.syntaxError("[Parser][Terminal] LLDriver: Cannot work with terminal",X);
+          this.syntaxError("[Parser][Terminal] LLDriver: Cannot work with terminal "+X);
         } //end if;   
         
       } else if (X.eop) {
@@ -202,12 +202,12 @@ class Parser {
         this.semantic.stack.popEOP(X);
         this.parseStack.pop();
 
-        logHW9.info('X = EOP(' + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ")");
-        logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
-        logHW9.info("PS:", this.getPrettyPrintParseStack(true));
-        logHW9.info("SS:", this.semantic.stack.stackToString());
-        logHW9.info("Indices:", this.semantic.stack.pointersToString());
-        logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        this.hw9Lines.push('X = EOP(' + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ")");
+        this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
+        this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+        this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
+        this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
+        this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
       } else if (X.indexOf("#") === 0) {
 
@@ -267,18 +267,18 @@ class Parser {
             throw "Can't figure out action symbol for " + X;
         }
 
-        logHW9.info('X = ' + X);
-        logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
-        logHW9.info("PS:", this.getPrettyPrintParseStack(true));
-        logHW9.info("SS:", this.semantic.stack.stackToString());
-        logHW9.info("Indices:", this.semantic.stack.pointersToString());
-        logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        this.hw9Lines.push('X = ' + X);
+        this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
+        this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+        this.hw9Lines.push("SS:" +  this.semantic.stack.stackToString());
+        this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
+        this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
         
       } //end if; 
     } //end while 
     
     this.tokenArray.shift();
-    logHW8.info("|" + pad("Done",11) + "|" + pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false));
+    this.hw8Lines.push("|" + pad("Done",11) + "|" + pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false));
 
   } //end LLDriver 
 
@@ -309,7 +309,7 @@ class Parser {
    * IN:  message is a string to display in the log.
    */
   syntaxError(message) {
-    log.error("[Parser] Syntax Error:",message);
+    log.error("[Parser] Syntax Error:",message + "\n" + this.tokenArray.join(' '));
     throw message;
   }
   
