@@ -29,7 +29,7 @@ class Grammar {
 
     if (grammarFile !== undefined) {
       this.grammarReader(grammarFile);
-      //this.fillParseTable();
+
     }
     
     log.verbose("###############################");

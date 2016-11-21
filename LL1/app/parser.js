@@ -10,7 +10,7 @@ var winston = require('winston');
 var log = new (winston.Logger)({
     transports: [
       new (winston.transports.Console)({
-        level: "verbose",
+        level: "debug",
         colorize: true,
         timestamp: false
       })
@@ -254,11 +254,11 @@ class Parser {
           case "Assign":
             this.semantic.Assign(argsMatch[0],argsMatch[1]);
             break;
-          case "Read":
-            this.semantic.Read(argsMatch[0]);
+          case "ReadId":
+            this.semantic.ReadId(argsMatch[0]);
             break;
-          case "Write":
-            this.semantic.Write(argsMatch[0]);
+          case "WriteExpr":
+            this.semantic.WriteExpr(argsMatch[0]);
             break;
           case "GenInfix":
             this.semantic.GenInfix(argsMatch[0],argsMatch[1],argsMatch[2],argsMatch[3]);

@@ -44,26 +44,21 @@ class Semantic {
       throw "[Semantic] Argument count must be between 1 and 4.";
     }
     let s = "";
-    s = args[0];
-    if (args.length > 1) {
-      s += " " + args.slice(1).join(",");
-    }
-
+    s += "(" + args.join(",") + ")";
+ 
     this.codeLines.push(s);
     
     //return it too so it can be tested easily
     return s;
   }
   
-  
   checkId(symbol /*: string */) {
     if (!this.symbolTable.lookup(symbol)) {
       //didn't find the symbol in the lookup table...
       //generate an instruction for it then
       this.symbolTable.enter(symbol);
-      let code = this.generate("DECL",symbol,"Integer");
-
-      return code;
+      //let code = this.generate("DECL",symbol,"Integer");
+      //return code;
     }
   }
   
@@ -76,29 +71,22 @@ class Semantic {
   
   extractExpr(e /*:typeof types.ExpressionRecord*/) {
     switch (e.kind) {
-      case (types.ExpressionKind.ID_EXPR || types.ExpressionKind.TEMP_EXPR):
+      case (types.ExpressionKind.ID_EXPR):
+        return "Addr(" + e.name + ")";
+      case (types.ExpressionKind.TEMP_EXPR):
         return e.name;
       case (types.ExpressionKind.LITERAL_EXPR):
         return e.val;
+      default:
+        return e;
     }
   }
 
   extractOp(o /*:typeof types.OperatorRecord*/) {
     if (o.kind === types.OperatorKind.PLUS_OP) {
-      return "ADD ";
+      return "ADDI";
     } else {
-      return "SUB ";
-    }
-  }
-
-  extract(e /*:typeof types.SemanticRecord*/) {
-    switch (e.kind) {
-      case (types.SemanticKind.OP_REC):
-        return this.extractOp(e.opRec);
-      case (types.SemanticKind.EXPR_REC):
-        return this.extractExpr(e.exprRec);
-      case (types.SemanticKind.ERROR):
-        return null;
+      return "SUBI";
     }
   }
 
@@ -109,7 +97,7 @@ class Semantic {
     let targetRec = this.stack.stack[targetPos];
     let sourcePos = this.getArrayPosition(source);
     let sourceRec = this.stack.stack[sourcePos];
-    let code = this.generate("STOR",this.extractExpr(sourceRec),targetRec.name);
+    let code = this.generate("ASSIGN",this.extractExpr(sourceRec),"Addr(" + targetRec.name + ")");
     return code;
   }
 
@@ -118,7 +106,7 @@ class Semantic {
   ReadId(inVar) /*: string */{
     let inPos = this.getArrayPosition(inVar);
     let inRec = this.stack.stack[inPos];
-    let code =  this.generate("RD  ",inRec.name,"Integer");
+    let code =  this.generate("READI",inRec.name);
     return code;
   }
 
@@ -127,7 +115,7 @@ class Semantic {
   WriteExpr(outExpr) {
     let outPos = this.getArrayPosition(outExpr);
     let outRec = this.stack.stack[outPos];
-    let code = this.generate("WR  ",this.extractExpr(outRec),"Integer");
+    let code = this.generate("WRITEI",this.extractExpr(outRec));
     return code;
   }
   
@@ -147,8 +135,11 @@ class Semantic {
     let e2pos = this.getArrayPosition(e2);
     let opPos = this.getArrayPosition(op);
     
-    let exprRec = new types.ExpressionRecord(types.ExpressionKind.TEMP_EXPR);
-    exprRec.name = this.getTemp();
+    //create the temp record
+    let tempName = this.getTemp();
+    let exprRec = new types.ExpressionRecord(tempName,types.ExpressionKind.TEMP_EXPR);
+    exprRec.name = tempName;
+    
     let code = this.generate(
         this.extractOp(this.stack.stack[opPos]),
         this.extractExpr(this.stack.stack[e1pos]), 
@@ -212,8 +203,8 @@ class Semantic {
   //finishing instruction. yay!
   Finish() /*: string */ {
     log.verbose("[Semantic] Finish()");
-    let code = this.generate("HALT");
-    return code;
+    //let code = this.generate("HALT");
+    //return code;
   }
   
   Copy(sourcePosition,destPosition) {

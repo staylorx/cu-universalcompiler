@@ -6,7 +6,7 @@
 
 class OperatorRecord {
   
-  constructor(kind = OperatorKind.PLUS_OP) {
+  constructor(kind = -999) {
     this.operatorRecord = true;
     this.kind = kind;
   }
@@ -15,7 +15,7 @@ class OperatorRecord {
 
 class ExpressionRecord {
   
-  constructor(symbol = "BogusSym", kind = ExpressionKind.ID_EXPR, value = "Bogus") {
+  constructor(symbol = "BogusSym", kind = -999, value = "Bogus") {
     this.expressionRecord = true;
     this.symbol = symbol;
     this.kind = kind;
