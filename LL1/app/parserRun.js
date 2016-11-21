@@ -7,8 +7,6 @@
 //staylorx@gmail.com
 
 var Parser = require('../app/parser.js');
-var log = require('winston');
-log.level = "debug";
 
 var reservedCodeTokens = {
   BeginSym:   "begin",
@@ -36,10 +34,9 @@ var parser = new Parser(programString, reservedGrammarTokens, reservedCodeTokens
 
 parser.LLDriver();
 
-// console.log("==============");
-// console.log("Output for HW8");
-// for (let line of parser.w8) {
-//   console.log(line);
-// }
+console.log(programString);
+for (let line of parser.semantic.codeLines) {
+  console.log(line);
+}
 
 console.log("Finished");

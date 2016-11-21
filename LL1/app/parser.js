@@ -1,13 +1,25 @@
 "use strict";
 
-var fs = require('fs');
-var log = require('winston');
 var Grammar = require("./grammar.js");
 var Scanner = require("./scanner.js");
 var Semantic = require("./semantic.js");
 var Readable = require('stream').Readable;
+var winston = require('winston');
 
-log.level = "debug";
+//default logger
+var log = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)({
+        level: "verbose",
+        colorize: true,
+        timestamp: false
+      })
+    ]
+  });
+  
+//a couple very special loggers for homework
+var logHW8 = require('./lib/logger.js').logHW8;
+var logHW9 = require('./lib/logger.js').logHW9;
 
 /*
  * A class to parse tokens from the scanner.
@@ -38,8 +50,7 @@ class Parser {
     this.parseStack = [];
     this.totalOutput = [];
     this.semantic = new Semantic(true);
-    this.w8 = [];
-    this.w9 = [];
+    this.tokenArray = []; //used for homework output
 
     if (grammarFile === undefined) {
       throw "[Parser] A grammar file is required.";
@@ -74,12 +85,13 @@ class Parser {
     this.scanner = new Scanner(readable, this.validCodeTokens);
     
     // //need to do this for the homework. nothing else
-    // this.tokenString = this.scanner.tokensAsString();
+    //the true argument normalizes the original input so it can
+    //be reused.
+    let tokenString = this.scanner.tokensAsString(true);
+    this.tokenArray = tokenString.split(" ");
     
     // //read again to reset the scanner
-    // this.scanner = new Scanner(this.tokenString, this.validCodeTokens);
-    
-    //this.semantic = new Semantic(true);
+    this.scanner = new Scanner(tokenString, this.validCodeTokens);
     
     log.verbose("##############################");
     log.verbose("#");
@@ -97,30 +109,26 @@ class Parser {
     
     this.parseStack.push("<system goal>"); 
     let currentToken = this.scanner.scan();
-    log.info('[Parser][HW9] Entry into the main loop "while not"');
-    log.info("[Parser][HW9] Input:", currentToken);
-    log.info("[Parser][HW9] PS:", this.getPrettyPrintParseStack());
-    log.info("[Parser][HW9] SS:", this.semantic.stack.stackToString());
-    log.info("[Parser][HW9] Indices:", this.semantic.stack.pointersToString());
-    log.info('[Parser][HW9] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+    logHW9.info('Entry into the main loop "while not"');
+    logHW9.info("Input:", currentToken);
+    logHW9.info("PS:", this.getPrettyPrintParseStack(true));
+    logHW9.info("SS:", this.semantic.stack.stackToString());
+    logHW9.info("Indices:", this.semantic.stack.pointersToString());
+    logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
-    // this.w8.push ("|" + pad("PREDICT",11)+"|"+pad("TOKEN",24)+"|"+"PARSE STACK");
+    logHW8.info("|" + pad("PREDICT",11)+"|"+pad('INPUT CODE',40)+"|"+"PARSE STACK");
 
     while (this.parseStack.length !== 0 ) {
       
       //let X be the top stack symbol; 
-      let X = this.parseStack[0];
+      let X = this.parseStack[this.parseStack.length-1];
       
-      //let a be the current input buffer
-      //TODO lots of impedence between the buffer, symbol, the token.
+      //let a be the current input token
       let a = currentToken;
-      
-      this.w9.push("X: " + JSON.stringify(X) + "\n" + "PS: " + JSON.stringify(this.parseStack) + "\n" + "SS: " + JSON.stringify(this.semantic.stack.toString()) + "\n");
       
       if (this.grammar.nonTerminals.has(X)) {
         
-        this.w8.push("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(a + " " + this.nextToken + " ...",24) + "|" + this.parseStack.join(" ")          );
-        log.debug("--------------------");
+        logHW8.info("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false) );
         log.debug ("[Parser][NonTerminal] X=",X);
         
         if (this.grammar.T(X,a) !== undefined) {
@@ -140,22 +148,22 @@ class Parser {
 
           //Pop X from the parse stack
           //Expand nonterminal, replace X with Y1Y2. . . Ym on the stack. 
-          this.parseStack.shift();
+          this.parseStack.pop();
 
           //push EOP on the parse stack
           let eop = this.semantic.stack.pushEOP([...P.RHSActions]);
-          this.parseStack.unshift(eop);
+          this.parseStack.push(eop);
 
           for (let i = 0; i < reverseY.length; i++) {
-            this.parseStack.unshift(reverseY[i]);
+            this.parseStack.push(reverseY[i]);
           }
 
-          log.info('[Parser][NonTerminal][HW9] T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
-          log.info("[Parser][NonTerminal][HW9] Input:", currentToken);
-          log.info("[Parser][NonTerminal][HW9] PS:", this.getPrettyPrintParseStack());
-          log.info("[Parser][NonTerminal][HW9] SS:", this.semantic.stack.stackToString());
-          log.info("[Parser][NonTerminal][HW9] Indices:", this.semantic.stack.pointersToString());
-          log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          logHW9.info('T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
+          logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
+          logHW9.info("PS:", this.getPrettyPrintParseStack(true));
+          logHW9.info("SS:", this.semantic.stack.stackToString());
+          logHW9.info("Indices:", this.semantic.stack.pointersToString());
+          logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
           this.syntaxError("[Parser][NonTerminal] LLDriver T(X,a) is undefined, T(",JSON.stringify(X),",",a,")");
@@ -163,33 +171,27 @@ class Parser {
         
       } else if (this.grammar.terminals.has(X)) {   
 
-        log.debug("--------------------");
         log.debug ("[Parser][Terminal] X=",X);
 
         if (X === a) {
         
-          // this.w8.push("|" + 
-          //   pad("Match",11) + 
-          //   "|" + 
-          //   pad(a + " " + this.nextToken + " ...",24) + 
-          //   "|" + 
-          //   this.parseStack.join(" ")  
-          // );
+          this.tokenArray.shift();
+          logHW8.info("|" + pad("Match",11) + "|" + pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false)   );
 
           //Copy token info from scanner into SS[currentIndex]
           this.semantic.stack.setToken(this.scanner.tokenBuffer);
           
-          this.parseStack.shift();
+          this.parseStack.pop();
 
           //Get next token    
           currentToken = this.scanner.scan();
 
-          log.info('[Parser][Terminal][HW9] X = ' + X);
-          log.info("[Parser][Terminal][HW9] Input:", currentToken);
-          log.info("[Parser][Terminal][HW9] PS:", this.getPrettyPrintParseStack());
-          log.info("[Parser][Terminal][HW9] SS:", this.semantic.stack.stackToString());
-          log.info("[Parser][Terminal][HW9] Indices:", this.semantic.stack.pointersToString());
-          log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          logHW9.info('X = ' + X);
+          logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
+          logHW9.info("PS:", this.getPrettyPrintParseStack(true));
+          logHW9.info("SS:", this.semantic.stack.stackToString());
+          logHW9.info("Indices:", this.semantic.stack.pointersToString());
+          logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
           this.syntaxError("[Parser][Terminal] LLDriver: Cannot work with terminal",X);
@@ -198,43 +200,105 @@ class Parser {
       } else if (X.eop) {
         
         this.semantic.stack.popEOP(X);
-        this.parseStack.shift();
+        this.parseStack.pop();
 
-        log.info('[Parser][EOP][HW9] X = ' + X);
-        log.info("[Parser][EOP][HW9] Input:", currentToken);
-        log.info("[Parser][EOP][HW9] PS:", this.getPrettyPrintParseStack());
-        log.info("[Parser][EOP][HW9] SS:", this.semantic.stack.stackToString());
-        log.info("[Parser][EOP][HW9] Indices:", this.semantic.stack.pointersToString());
-        log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        logHW9.info('X = EOP(' + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ")");
+        logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
+        logHW9.info("PS:", this.getPrettyPrintParseStack(true));
+        logHW9.info("SS:", this.semantic.stack.stackToString());
+        logHW9.info("Indices:", this.semantic.stack.pointersToString());
+        logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
       } else if (X.indexOf("#") === 0) {
 
-        this.parseStack.shift();
-        //TODO call semantic routine for X
+        this.parseStack.pop();
 
-        log.info('[Parser][Action][HW9] X = ' + X);
-        log.info("[Parser][Action][HW9] Input:", currentToken);
-        log.info("[Parser][Action][HW9] PS:", this.getPrettyPrintParseStack());
-        log.info("[Parser][Action][HW9] SS:", this.semantic.stack.stackToString());
-        log.info("[Parser][Action][HW9] Indices:", this.semantic.stack.pointersToString());
-        log.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        //grab the action code        
+        let funktion = X.match(/^#\w*/g);
+        funktion = funktion[0].slice(1);
+
+        //get the SS positions
+        let argsMatch = X.match(/\$./g);
+        
+        //convert the $$ to 0, $1 to 1, $2 to 2, etc.
+        if (argsMatch) {
+          for (let i = 0; i < argsMatch.length; i++) {
+            if (argsMatch[i].slice(1)=="$") {
+              argsMatch[i] = 0;
+            } else {
+              argsMatch[i] = parseInt(argsMatch[i].slice(1),10);
+            }
+          }
+        }
+        
+        //call semantic routine for X
+        switch (funktion) {
+          case "Start":
+            this.semantic.Start();
+            break;
+          case "ProcessId":
+            this.semantic.ProcessId();
+            break;
+          case "ProcessLiteral":
+            this.semantic.ProcessLiteral();
+            break;
+          case "ProcessOp":
+            this.semantic.ProcessOp();
+            break;
+          case "Finish":
+            this.semantic.Finish();
+            break;
+          case "Copy":
+            this.semantic.Copy(argsMatch[0],argsMatch[1]);
+            break;
+          case "Assign":
+            this.semantic.Assign(argsMatch[0],argsMatch[1]);
+            break;
+          case "Read":
+            this.semantic.Read(argsMatch[0]);
+            break;
+          case "Write":
+            this.semantic.Write(argsMatch[0]);
+            break;
+          case "GenInfix":
+            this.semantic.GenInfix(argsMatch[0],argsMatch[1],argsMatch[2],argsMatch[3]);
+            break;
+          default:
+            throw "Can't figure out action symbol for " + X;
+        }
+
+        logHW9.info('X = ' + X);
+        logHW9.info("Input:", pad(this.tokenArray.join(' '),40));
+        logHW9.info("PS:", this.getPrettyPrintParseStack(true));
+        logHW9.info("SS:", this.semantic.stack.stackToString());
+        logHW9.info("Indices:", this.semantic.stack.pointersToString());
+        logHW9.info('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
         
       } //end if; 
     } //end while 
     
-    // this.w8.push ("|" + pad("Done",11) + "|" + pad(" ",24) + "|" + this.parseStack.join(" "));
+    this.tokenArray.shift();
+    logHW8.info("|" + pad("Done",11) + "|" + pad(this.tokenArray.join(' '),40) + "|" + this.getPrettyPrintParseStack(false));
 
   } //end LLDriver 
 
-  getPrettyPrintParseStack() {
+  getPrettyPrintParseStack(complexStack) {
+    //NOTE: This reverses the array so the stack "reads" cleanly.
+    //copy the stack/array
+    let newArray = this.parseStack.slice().reverse();
+    
     let s = "";
-    for (let X of this.parseStack) {
-      if (!X.eop) {
-        s += X + " ";
-      } else if (X.eop) {
-        s += "EOP(" + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ") ";
+    for (let X of newArray) {
+      if (X.eop) {
+        if (complexStack) {
+          s += "EOP(" + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ") ";
+        }
+      } else if (X.indexOf("#") === 0) {
+        if (complexStack) {
+          s += X + " ";
+        }
       } else {
-        s += "BOGUS! ";
+        s += X + " ";
       }
     }
     return s;

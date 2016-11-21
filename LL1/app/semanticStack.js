@@ -1,7 +1,7 @@
 "use strict";
 
+var types = require("./lib/types.js");
 var log = require('winston');
-log.level = "info";
 
 class SemanticStack {
 
@@ -24,7 +24,7 @@ class SemanticStack {
   }
   
   setToken(token /*: string */) {
-    this.stack[this.stack.length - this.pointers.currentIndex] = token;
+    this.stack[this.pointers.currentIndex-1] = token;
     this.pointers.currentIndex++;
   }
   
@@ -46,7 +46,7 @@ class SemanticStack {
       if (symbols[i].indexOf("#") === 0) {
         //action symbol... skip quietly
       } else {
-        this.stack.unshift(symbols[i]);
+        this.stack.push(symbols[i]);
         noActionCount++;
       }
     }
@@ -74,12 +74,52 @@ class SemanticStack {
     this.pointers.currentIndex = X.currentIndex;
     this.pointers.topIndex = X.topIndex;
     
+    //if the topIndex is taller than the stack, 
+    //pop off until it's not.
+    while (this.stack.length >= X.topIndex) {
+      this.stack.pop();
+    }
+    
+    this.pointers.currentIndex++;
+    
     log.debug("[SemanticStack] popped EOP, X=" + JSON.stringify(X) + ";pointers now at " + this.pointers);
     
   }
   
   stackToString() {
-    return this.stack.join(" ");
+    //copy the stack/array
+    //NOTE: This reverses the array so the stack "reads" from left-to-right.
+    var newArray = this.stack.slice(0).reverse();
+    for (let i = 0; i < newArray.length; i++) {
+      let s = newArray[i];
+      if (s.expressionRecord) {
+        switch (s.kind) {
+          case types.ExpressionKind.ID_EXPR:
+            newArray[i] = "Id[" + s.name + "]";
+            break;
+          case types.ExpressionKind.LITERAL_EXPR:
+            newArray[i] = "Literal[" + s.val + "]";
+            break;
+          case types.ExpressionKind.TEMP_EXPR:
+            newArray[i] = "Temp[" + s.name + "]";
+            break;
+          default:
+            newArray[i] = "Expr!BOGUS!";
+        }
+      } else if (s.operatorRecord) {
+        switch (s.kind) {
+          case types.OperatorKind.MINUS_OP:
+            newArray[i] = "Op[-]";
+            break;
+          case types.OperatorKind.PLUS_OP:
+            newArray[i] = "Op[+]";
+            break;
+          default:
+            newArray[i] = "Op!BOGUS!";
+        }
+      }
+    }
+    return newArray.join(" ");
   }
   
   pointersToString() {

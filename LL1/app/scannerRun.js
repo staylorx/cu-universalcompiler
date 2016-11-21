@@ -1,8 +1,6 @@
 "use strict";
 
 var Scanner = require('./scanner.js');
-var log = require('winston');
-log.level = "debug";
 
 var reservedCodeTokens = {
   BeginSym:   "begin",
@@ -28,17 +26,21 @@ let scanner;
 
 programString = "begin A := BB + 314 + A; end $";
 scanner = new Scanner(programString,reservedCodeTokens);
-log.info(scanner.tokensAsString());
+let s = scanner.tokensAsString(true);
+console.log("1:",s);
+
+scanner = new Scanner(s,reservedCodeTokens);
+console.log("2:",scanner.tokensAsString());
 
 // programString = "<statement>-> write(<expr list>) ;";
 // scanner = new Scanner(programString,reservedGrammarTokens);
-// log.info(scanner.tokensAsString());
+// console.log(scanner.tokensAsString());
 
 // programString = "<add op>    -> PlusOp #ProcessOp($$)";
 // scanner = new Scanner(programString,reservedGrammarTokens);
-// log.info(scanner.tokensAsString());
+// console.log(scanner.tokensAsString());
 
-
+console.log("Finished.");
 
 
 

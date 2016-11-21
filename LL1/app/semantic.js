@@ -1,9 +1,9 @@
 "use strict";
 
-var log = require('winston');
 var SymbolTable = require("./symbolTable.js");
-var types = require("./types.js");
+var types = require("./lib/types.js");
 var SemanticStack = require("./semanticStack.js");
+var log = require('winston');
 
 /*
  * A class to build out semantic rules as output instructions.
@@ -32,6 +32,7 @@ class Semantic {
     
     //semantic stack starts with the start symbol
     this.stack = new SemanticStack('<system goal>');
+    this.codeLines = [];
 
   }
 
@@ -47,11 +48,8 @@ class Semantic {
     if (args.length > 1) {
       s += " " + args.slice(1).join(",");
     }
-    
-    if (this.consoleFlag) {
-      //"write" the generation out
-      console.log(s);
-    }
+
+    this.codeLines.push(s);
     
     //return it too so it can be tested easily
     return s;
@@ -63,8 +61,8 @@ class Semantic {
       //didn't find the symbol in the lookup table...
       //generate an instruction for it then
       this.symbolTable.enter(symbol);
-      let code = this.generate("Declare",symbol,"Integer");
-      this.codeLines.push(code);
+      let code = this.generate("DECL",symbol,"Integer");
+
       return code;
     }
   }
@@ -106,67 +104,126 @@ class Semantic {
 
   //Generates the assign
   //OUT: returns the string generated
-  assign(target /*:typeof types.SemanticRecord*/, source /*:typeof types.SemanticRecord*/) /*: string */ {
-    let code = this.generate("Store",this.extract(source),target.exprRec.name);
+  Assign(target, source) /*: string */ {
+    let targetPos = this.getArrayPosition(target);
+    let targetRec = this.stack.stack[targetPos];
+    let sourcePos = this.getArrayPosition(source);
+    let sourceRec = this.stack.stack[sourcePos];
+    let code = this.generate("STOR",this.extractExpr(sourceRec),targetRec.name);
     return code;
   }
 
   //Generates the read
   //OUT: returns the string generated
-  readId(inVar /*: SemanticRecord */) /*: string */{
-    let code =  this.generate("Read",inVar.exprRec.name,"Integer");
+  ReadId(inVar) /*: string */{
+    let inPos = this.getArrayPosition(inVar);
+    let inRec = this.stack.stack[inPos];
+    let code =  this.generate("RD  ",inRec.name,"Integer");
     return code;
   }
 
   //Generates the write
   //OUT: returns the string generated
-  writeExpr(outExpr /*:typeof types.SemanticRecord*/) {
-    let code = this.generate("Write",this.extract(outExpr),"Integer");
+  WriteExpr(outExpr) {
+    let outPos = this.getArrayPosition(outExpr);
+    let outRec = this.stack.stack[outPos];
+    let code = this.generate("WR  ",this.extractExpr(outRec),"Integer");
     return code;
   }
   
-  //OUT: returns an exprRec
-  genInfix(e1 /*:typeof types.SemanticRecord*/,op /*:typeof types.SemanticRecord*/,e2 /*:typeof types.SemanticRecord*/)  /*: types.SemanticRecord */{
+  getArrayPosition(actionPosition) {
+    let result = -999;
+    if (actionPosition === 0) {
+      result = this.stack.pointers.leftIndex - 1;
+    } else {
+      result = this.stack.pointers.rightIndex - 1 + actionPosition - 1;
+    }
+    return result;
+  }
+  
+  GenInfix(e1 ,op ,e2, dest) {
+    
+    let e1pos = this.getArrayPosition(e1);
+    let e2pos = this.getArrayPosition(e2);
+    let opPos = this.getArrayPosition(op);
+    
     let exprRec = new types.ExpressionRecord(types.ExpressionKind.TEMP_EXPR);
     exprRec.name = this.getTemp();
-    let code = this.generate(this.extractOp(op),this.extract(e1), this.extract(e2), exprRec.exprRec.name);
-    //TODO hacky
-    console.log(code);
-    return exprRec;
+    let code = this.generate(
+        this.extractOp(this.stack.stack[opPos]),
+        this.extractExpr(this.stack.stack[e1pos]), 
+        this.extractExpr(this.stack.stack[e2pos]), 
+        exprRec.name);
+
+    if (dest === 0) {
+      this.stack.stack[this.stack.pointers.leftIndex - 1] = exprRec;  
+    } else {
+      this.stack.stack[this.stack.pointers.rightIndex - 1 + dest - 1] = exprRec;  
+    }
+
+    return code;
   }
 
-  //returns a new SemanticRecord
-  processId() /*: types.SemanticRecord */{
-    this.checkId(this.currentStack());
-    let name = this.currentStack();
-    return new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,name);
+  //processes from the $$=LHS so no index number required
+  ProcessId() {
+    log.verbose("[Semantic] ProcessId()");
+    let token = this.currentItem();
+    this.checkId(token);
+    let name = token;
+    let s = new types.ExpressionRecord("Id",types.ExpressionKind.ID_EXPR,name);
+    this.stack.stack[this.stack.pointers.leftIndex - 1] = s;
   }
   
-  //returns an SemanticRecord
-  processLiteral() /*: types.SemanticRecord */ {
-    let value = this.currentStack();
-    return new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,parseInt(value,10));
+  //processes from the $$=LHS so no index number required
+  ProcessLiteral() {
+    log.verbose("[Semantic] ProcessLiteral()");
+    let value = this.currentItem();
+    let s = new types.ExpressionRecord("IntLiteral",types.ExpressionKind.LITERAL_EXPR,value);
+    this.stack.stack[this.stack.pointers.leftIndex - 1] = s;
   }
   
+  //processes from the $$=LHS so no index number required
   //Take a plus/minus token and returns a new OperatorRecord
-  processOp() {
-    let token = this.currentStack();
-    if (token === "PlusOp") {
-      return new types.OperatorRecord(types.OperatorKind.PLUS_OP);      
+  ProcessOp() {
+    log.verbose("[Semantic] ProcessOp()");
+    let token = this.currentItem();
+    let s;
+    if (token === "+") {
+      s = new types.OperatorRecord(types.OperatorKind.PLUS_OP);      
+    } else if (token === "-") {
+      s = new types.OperatorRecord(types.OperatorKind.MINUS_OP);      
     } else {
-      return new types.OperatorRecord(types.OperatorKind.MINUS_OP);      
+      throw "[Semantic][ProcessOp] Cannot work with " + token + " here.";
     }
+    this.stack.stack[this.stack.pointers.leftIndex - 1] = s;
   }
   
-  currentStack() {
-    let curS = this.SS.currentItem();
-    return this.extract(curS);
+  currentItem() {
+    let curS =  this.stack.stack[this.stack.pointers.currentIndex-2];
+    return curS;
+  }
+  
+  Start() {
+    //Instantiating this class does the heavy lifting
+    //that this method used to do.
+    log.verbose("[Semantic] Start()");
   }
   
   //finishing instruction. yay!
-  finish() /*: string */ {
-    let code = this.generate("Halt");
+  Finish() /*: string */ {
+    log.verbose("[Semantic] Finish()");
+    let code = this.generate("HALT");
     return code;
+  }
+  
+  Copy(sourcePosition,destPosition) {
+    
+    log.verbose("[Semantic] Copy(",sourcePosition,",",destPosition,")");
+    
+    let source = this.getArrayPosition(sourcePosition);
+    let dest = this.getArrayPosition(destPosition);
+
+    this.stack.stack[dest] = this.stack.stack[source];
   }
 
 }

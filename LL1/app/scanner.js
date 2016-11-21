@@ -6,9 +6,8 @@
 //Stephen Taylor, University of Colorado Denver
 //staylorx@gmail.com
 
-var log = require('winston');
 var Readable = require('stream').Readable;
-log.level = "info";
+var log = require('winston');
 
 var Action = {
   ERROR:         8, //1000
@@ -409,16 +408,23 @@ class Scanner {
  
   /*
    * Helper method run the scans and output as a string
+   * IN: If original is set true, then the output will
+   *     be the tokens as scanned. Essentially this "normalizes"
+   *     the original input.
+   *     Otherwise, the input is scanned as symbols.
    * OUT: String of all the tokens together
    */
-  tokensAsString() {
+  tokensAsString(original = false) {
   
     let token = "";
     //run through the stream
     var outString = "";
     while ((token = this.scan()) !== "EofSym") {
-      outString += token + " ";
-      log.debug(token);
+      if (original) {
+        outString += this.tokenBuffer + " ";
+      } else {
+        outString += token + " ";
+      }
     }
     outString += "EofSym";
     

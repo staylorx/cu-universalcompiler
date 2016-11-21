@@ -7,6 +7,7 @@
 class OperatorRecord {
   
   constructor(kind = OperatorKind.PLUS_OP) {
+    this.operatorRecord = true;
     this.kind = kind;
   }
   
@@ -15,6 +16,7 @@ class OperatorRecord {
 class ExpressionRecord {
   
   constructor(symbol = "BogusSym", kind = ExpressionKind.ID_EXPR, value = "Bogus") {
+    this.expressionRecord = true;
     this.symbol = symbol;
     this.kind = kind;
     if (kind === ExpressionKind.ID_EXPR || kind === ExpressionKind.TEMP_EXPR) {
@@ -26,18 +28,19 @@ class ExpressionRecord {
   
 }
 
-class SemanticRecord {
-  constructor(opRec, exprRec, error, kind = SemanticKind.EXPR_REC) {
-    this.kind = kind;
-    if (opRec !== undefined) {
-      this.opRec = opRec;
-    } else if ( exprRec !== undefined ) {
-      this.exprRec = exprRec;
-    } else {
-      this.error = error;
-    }
-  }
-}
+// class SemanticRecord {
+//   constructor(opRec, exprRec, error, kind = SemanticKind.EXPR_REC) {
+//     this.semanticRecord = true;
+//     this.kind = kind;
+//     if (opRec !== undefined) {
+//       this.opRec = opRec;
+//     } else if ( exprRec !== undefined ) {
+//       this.exprRec = exprRec;
+//     } else {
+//       this.error = error;
+//     }
+//   }
+// }
 
 
 
@@ -52,10 +55,11 @@ var OperatorKind = {
   MINUS_OP: 2
 };
 
-var SemanticKind = {
-  OP_REC:   1,
-  EXPR_REC: 2,
-  ERROR:    3
-};
+// var SemanticKind = {
+//   OP_REC:   1,
+//   EXPR_REC: 2,
+//   ERROR:    3
+// };
 
-module.exports = { SemanticRecord, ExpressionRecord, OperatorRecord, ExpressionKind, OperatorKind, SemanticKind };
+//module.exports = { SemanticRecord, ExpressionRecord, OperatorRecord, ExpressionKind, OperatorKind, SemanticKind };
+module.exports = { ExpressionRecord, OperatorRecord, ExpressionKind, OperatorKind };

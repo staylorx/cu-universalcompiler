@@ -1,7 +1,6 @@
 "use strict";
 
 var log = require('winston');
-log.level = "info";
 
 class SymbolTable {
 

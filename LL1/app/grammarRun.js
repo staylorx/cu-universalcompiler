@@ -1,9 +1,6 @@
 "use strict";
 
-var log = require('winston');
 var Grammar = require("./grammar.js");
-
-log.level = "debug";
 
 let reservedGrammarTokens = {
   BeginSym:   "begin",
@@ -32,4 +29,4 @@ var grammar = new Grammar("grammar2.txt", reservedGrammarTokens);
 
 grammar.fillParseTable();
 console.log("Parse Table:",grammar.parseTable);
-log.info("Finished.");
+console.log("Finished.");

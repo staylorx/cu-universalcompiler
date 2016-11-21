@@ -6,13 +6,12 @@
 //Stephen Taylor, University of Colorado Denver
 //staylorx@gmail.com
 
-var log = require('winston');
 var fs = require('fs');
 var readline = require('readline');
 var Scanner = require('./scanner.js');
 var stream = require('stream');
 var LineByLine = require('n-readlines');
-log.level = "info";
+var log = require('winston');
 
 class Grammar {
 
