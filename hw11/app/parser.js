@@ -100,6 +100,17 @@ class Parser {
     if (this.currentToken !== legalToken) {
       let message = "Expecting '" + legalToken + "', found '" + this.currentToken + "'.";
       this.syntaxError(message);
+      let fallthroughSet = new Set(["EofSym","SemiColon"]);
+      if (fallthroughSet.has(legalToken)) {
+        var o = {call:"SYNTAX ERROR IN MATCH", input:"* Advancing the parse *", code:"LegalToken = " + legalToken};
+        this.totalOutput.push(o);
+        log.warn("[Parser][match] The legal token " + legalToken + " has fallen-through. Advancing scan.");1
+        this.scanFeed();
+        while (this.currentToken !== legalToken && this.nextToken !== "EofSym") {
+          log.warn("[Parser][match] Advancing scan to next legal token");
+          this.scanFeed();
+        }
+      }
     }
     this.tokenArray.shift();
     this.hwOutput("Call Match(" + legalToken + ")");    
@@ -119,8 +130,7 @@ class Parser {
    * IN:  message is a string to display in the log.
    */
   syntaxError(message) {
-    log.error("Syntax Error:",message);
-    throw message;
+    log.error("[Parser] Syntax Error:",message);
   }
   
   /*
@@ -162,7 +172,7 @@ class Parser {
   program() {
     //the procedure "Start" is implied in the creation of the Semantic object.
     this.hwOutput("Call Start");     
-    
+    this.checkInput(new Set(["BeginSym"]), new Set(["EofSym"]), new Set(["EofSym"]));
     this.match("BeginSym");
     
     this.hwOutput("Call StatementList");     
@@ -174,6 +184,7 @@ class Parser {
   //Grammar statement  
   statementList() {
     this.hwOutput("Call Statement");
+    this.checkInput(new Set(["Id","ReadSym","WriteSym"]), new Set(["EndSym"]), new Set(["EofSym"]));
     this.statement();
     
     switch (this.nextToken) {
@@ -196,7 +207,7 @@ class Parser {
   
   //Grammar statement  
   statement(expressionLevel = 1) {
-    
+    this.checkInput(new Set(["Id","ReadSym","WriteSym"]), new Set(["EndSym"]), new Set(["EofSym"]));
     switch (this.nextToken) {
       case "Id":
         this.hwOutput("Call Ident");         
@@ -283,7 +294,8 @@ class Parser {
   //Grammar statement  
   expression(expressionLevel = 1) {
     this.hwOutput("Call Primary");     
-    
+    this.checkInput(new Set(["Id","IntLiteral","LParem"]), new Set(["Comma","SemiColon","RParen"]), new Set(["EndSym"]));
+
     let leftOperand = this.primary();
 
     if (this.nextToken === "PlusOp" || this.nextToken === "MinusOp") {
@@ -370,6 +382,25 @@ class Parser {
         this.syntaxError("Fallthrough on 'primary'. No operation found for " + this.nextToken);
     }
     return result;
+  }
+  
+  checkInput(validSet, followSet, headerSet) {
+    if (validSet.has(this.nextToken)) {
+      //looks fine
+      return;
+    } else {
+      this.syntaxError("[Parser][checkInput] NextToken is not valid on check.");
+      
+      var o = {call:"SYNTAX ERROR IN CHECKINPUT", input:"* Advancing the parse *", code:"NextToken = " + this.nextToken};
+      this.totalOutput.push(o);
+
+      let unionSet1 = new Set([...validSet, ...followSet]);
+      let unionSet2 = new Set([...unionSet1, ...headerSet]);
+      while (!unionSet2.has(this.nextToken)) {
+        log.error("Advancing the feed due to error in parse");
+        this.scanFeed(); 
+      }
+    }
   }
 
 }

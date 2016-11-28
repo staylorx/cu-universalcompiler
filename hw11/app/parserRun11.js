@@ -10,7 +10,7 @@ var fs = require('fs');
 var Parser = require('../app/parser.js');
 var stringTable = require("string-table");
 var log = require('winston');
-log.level = "debug";
+log.level = "info";
 
 //made this configurable because with each assignment these change slightly
 var ValidTokens = {
@@ -30,11 +30,11 @@ var ValidTokens = {
   EofSym:     "$"
 };
 
-let programString = `BEGIN A := BB + 314 + A; END`;
+let programString = `BEGIN A === BB + 314 + A; END`;
 var parser = new Parser(programString, ValidTokens);
 parser.parse();
 
-var w = fs.createWriteStream('../out/hw11-1.txt');
+var w = fs.createWriteStream('../out/hw11-x.txt');
 w.write("Input:\n")
 w.write(programString + "\n");
 w.write("\nDetailed Output:\n")

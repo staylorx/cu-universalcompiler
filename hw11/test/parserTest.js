@@ -31,10 +31,15 @@ var ValidTokens = {
   EofSym:     "$"
 };
 
+var dir = "./out";
+if (!fs.existsSync(dir)){
+  fs.mkdirSync(dir);
+}
+
 describe('Parser Tests', function(){
 
   it('Testing the Parser, example from the assignment.', function(){
-    let programString = `begin A := BB + 314 + A; end`;
+    let programString = `begin A === BB + 314 + A; end`;
     var parser = new Parser(programString, ValidTokens);
     try {
       parser.parse();
@@ -55,8 +60,8 @@ describe('Parser Tests', function(){
     let programString = `
       begin 
         read(A,B,C,D,G);
-        Q := A + B + C; 
-        Z := D + G;
+        Q := A +- B + C
+        Z := D ** G;
         Y := Q + Z;
       end`;
     var parser = new Parser(programString, ValidTokens);
