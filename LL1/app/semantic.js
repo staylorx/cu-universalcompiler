@@ -3,6 +3,7 @@
 var SymbolTable = require("./symbolTable.js");
 var types = require("./lib/types.js");
 var SemanticStack = require("./semanticStack.js");
+var SymbolTable = require("./symbolTable.js");
 var log = require('winston');
 
 /*
@@ -27,12 +28,12 @@ class Semantic {
     this.nextToken = "";  
     this.consoleFlag = consoleFlag; 
 
-    this.symbolTable = new SymbolTable();
     this.maxTemp = 0;
-    
+    this.scopeLevel = 0;
     //semantic stack starts with the start symbol
     this.stack = new SemanticStack('<system goal>');
     this.codeLines = [];
+    this.symbolTable = new SymbolTable();
 
   }
 
@@ -53,18 +54,19 @@ class Semantic {
   }
   
   checkId(symbol /*: string */) {
-    if (!this.symbolTable.lookup(symbol)) {
+    if (!this.symbolTable.lookup(symbol, this.scopeLevel)) {
       //didn't find the symbol in the lookup table...
       //generate an instruction for it then
-      this.symbolTable.enter(symbol);
+      this.symbolTable.enter(symbol, this.scopeLevel);
       //let code = this.generate("DECL",symbol,"Integer");
       //return code;
     }
   }
   
+  //Added the scope level to give me some insight in the IR output
   getTemp() /*: string */{
     this.maxTemp++;
-    var tempName = "Temp&" + this.maxTemp;
+    var tempName = "Temp&" + this.scopeLevel + "_" + this.maxTemp;
     this.checkId(tempName);
     return tempName;
   }
@@ -101,6 +103,17 @@ class Semantic {
     return code;
   }
 
+  //increase the scope level
+  OpenScope() {
+    this.scopeLevel++;
+  }
+  
+  //remove all symbols from current scope level
+  CloseScope() {
+    this.symbolTable.closeScope(this.scopeLevel);
+    this.scopeLevel--;
+  }
+  
   //Generates the read
   //OUT: returns the string generated
   ReadId(inVar) /*: string */{

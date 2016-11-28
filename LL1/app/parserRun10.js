@@ -1,27 +1,12 @@
 "use strict";
 
 //ECMAScript 6 (NodeJS v6.5.0)
-//Homework #8
-//01-NOV-2016
+//Homework #9
+//11-NOV-2016
 //Stephen Taylor, University of Colorado Denver
 //staylorx@gmail.com
 
 var Parser = require('../app/parser.js');
-
-var hwFunc = function(programString) {
-  
-  let parser = new Parser(programString, reservedGrammarTokens, reservedCodeTokens, "grammar.txt");
-  parser.LLDriver();
-  let outLines = [];
-  outLines.push("Program Input:" + programString + "\n");
-  outLines.push("Compiler Output:");
-  outLines.push.apply(outLines, parser.semantic.codeLines);
-  outLines.push("==========================================");
-  outLines.push("Assignment Output:");
-  outLines.push.apply(outLines, parser.hw8Lines);
-  console.log(outLines.join("\n"));
-
-};
 
 var reservedCodeTokens = {
   BeginSym:   "BEGIN",
@@ -43,16 +28,47 @@ var reservedGrammarTokens = {
   EOfScan:    "$"
 };
 
+var hwFunc = function(programString) {
+  
+  let parser = new Parser(programString, reservedGrammarTokens, reservedCodeTokens, "grammar.txt");
+  parser.LLDriver();
+  let outLines = [];
+  outLines.push("Program Input:" + programString + "\n");
+  outLines.push("Compiler Output:");
+  outLines.push.apply(outLines, parser.semantic.codeLines);
+  outLines.push("==========================================");
+  outLines.push("Assignment Output:");
+  outLines.push.apply(outLines, parser.hw10Lines);
+  console.log(outLines.join("\n"));
+
+};
+
 var programStrings = [];
 
 //////////////////
 programStrings[1] = `
-BEGIN --SOMETHING UNUSUAL
-  READ(A1, New_A, D, B);
-  C:= A1 +(New_A - D) - 75;
-  New_C:=((B - (7)+(C+D))) - (3 - A1); -- STUPID FORMULA
-  WRITE (C, A1+New_C);
-  -- WHAT ABOUT := B+D;
+BEGIN 
+  C:=0;
+  BEGIN
+    A := 2;
+    B := A + 2;
+    BEGIN
+      A := 3;
+      BEGIN
+        A:=4 ;
+        Q:= A + C + D - 314 + 1;
+      END
+      A := C + 1;
+      WONDERFULLY_LONG_VAR_NAME := Q + A;
+    END
+  END
+  BEGIN
+    C:= A1 +(New_A - D) - 75;
+    WONDERFULLY_LONG_VAR_NAME := C + A1;
+  END
+  BEGIN
+    New_C:=((B - (7)+(C+D))) - (3 - A1); -- STUPID FORMULA
+  END
 END $
 `;
 

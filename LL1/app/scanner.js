@@ -174,6 +174,9 @@ var bootstrapTable = {
       "0123456789":{state:8,action:Action.MOVE_APPEND},
       " ":{state:25,action:Action.HALT_NOAPPEND},
       "(":{state:9,action:Action.MOVE_APPEND},
+      "\t":{state:25,action:Action.HALT_NOAPPEND}, 
+      "\r":{state:25,action:Action.HALT_NOAPPEND},
+      "\n":{state:25,action:Action.HALT_NOAPPEND} 
     }
   },
   "9": {

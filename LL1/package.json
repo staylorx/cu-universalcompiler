@@ -5,6 +5,7 @@
   "main": "app/parserRunner.js",
   "dependencies": {
     "n-readlines": "^0.2.7",
+    "singly-linked-list": "^0.2.7",
     "string-table": "^0.1.5",
     "winston": "^2.2.0"
   },

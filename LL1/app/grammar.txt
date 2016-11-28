@@ -1,7 +1,9 @@
-<program>        -> #Start BEGIN <stmt list> END
-<stmt list>      -> <statement> <statement tail>  
+<program>        -> #Start <block>
+<block>          -> BEGIN #OpenScope <stmt list> #CloseScope END
+<stmt list>      -> <statement> <statement tail>
 <statement tail> -> <stmt list>
 <statement tail> -> λ
+<statement>      -> <block>
 <statement>      -> <ident> :=<expression> ; #Assign($1, $3)
 <statement>      -> READ(<id list>); 
 <statement>      -> WRITE(<expr list>) ;

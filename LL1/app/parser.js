@@ -48,8 +48,7 @@ class Parser {
     this.semantic = new Semantic(true);
     this.tokenArray = []; //used for homework output
     this.tokenArrayLength;
-    this.hw8Lines = [];
-    this.hw9Lines = [];
+    this.hw10Lines = [];
 
     if (grammarFile === undefined) {
       throw "[Parser] A grammar file is required.";
@@ -109,14 +108,14 @@ class Parser {
     
     this.parseStack.push("<system goal>"); 
     let currentToken = this.scanner.scan();
-    this.hw9Lines.push('Entry into the main loop "while not"');
-    this.hw9Lines.push("Input:" + currentToken);
-    this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
-    this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
-    this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
-    this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
-
-    this.hw8Lines.push("|" + pad("PREDICT",11)+"|"+pad('INPUT CODE',this.tokenArrayLength)+"|"+"PARSE STACK");
+    this.hw10Lines.push('Entry into the main loop "while not"');
+    this.hw10Lines.push("Input:" + currentToken);
+    this.hw10Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+    this.hw10Lines.push("SS:" + this.semantic.stack.stackToString());
+    this.hw10Lines.push("Indices:" + this.semantic.stack.pointersToString());
+    this.hw10Lines.push("Symbols:\n" + this.semantic.symbolTable.toString());
+    this.hw10Lines.push("Strings:\n" + this.semantic.symbolTable.stringSpace.toString());
+    this.hw10Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
     while (this.parseStack.length !== 0 ) {
       
@@ -128,7 +127,6 @@ class Parser {
       
       if (this.grammar.nonTerminals.has(X)) {
         
-        this.hw8Lines.push("|" + pad("Predict " + this.grammar.T(X,a),11) + "|" +  pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false) );
         log.debug ("[Parser][NonTerminal] X=",X);
         
         if (this.grammar.T(X,a) !== undefined) {
@@ -158,12 +156,14 @@ class Parser {
             this.parseStack.push(reverseY[i]);
           }
 
-          this.hw9Lines.push('T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
-          this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
-          this.hw9Lines.push("PS:" +this.getPrettyPrintParseStack(true));
-          this.hw9Lines.push("SS:" +this.semantic.stack.stackToString());
-          this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
-          this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          this.hw10Lines.push('T(' + P.LHS + ',' + a + ') = ' + this.grammar.T(X,a));
+          this.hw10Lines.push("Input:" + this.tokenArray.join(' '));
+          this.hw10Lines.push("PS:" +this.getPrettyPrintParseStack(true));
+          this.hw10Lines.push("SS:" +this.semantic.stack.stackToString());
+          this.hw10Lines.push("Indices:" + this.semantic.stack.pointersToString());
+          this.hw10Lines.push("Symbols:\n" + this.semantic.symbolTable.toString());
+          this.hw10Lines.push("Strings:\n" + this.semantic.symbolTable.stringSpace.toString());
+          this.hw10Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
           this.syntaxError("[Parser][NonTerminal] LLDriver T(X,a) is undefined, T("+JSON.stringify(X)+","+a+")");
@@ -176,7 +176,6 @@ class Parser {
         if (X === a) {
         
           this.tokenArray.shift();
-          this.hw8Lines.push("|" + pad("Match",11) + "|" + pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false)   );
 
           //Copy token info from scanner into SS[currentIndex]
           this.semantic.stack.setToken(this.scanner.tokenBuffer);
@@ -186,12 +185,14 @@ class Parser {
           //Get next token    
           currentToken = this.scanner.scan();
 
-          this.hw9Lines.push('X = ' + X);
-          this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
-          this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
-          this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
-          this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
-          this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+          this.hw10Lines.push('X = ' + X);
+          this.hw10Lines.push("Input:" + this.tokenArray.join(' '));
+          this.hw10Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+          this.hw10Lines.push("SS:" + this.semantic.stack.stackToString());
+          this.hw10Lines.push("Indices:" + this.semantic.stack.pointersToString());
+          this.hw10Lines.push("Symbols:\n" + this.semantic.symbolTable.toString());
+          this.hw10Lines.push("Strings:\n" + this.semantic.symbolTable.stringSpace.toString());
+          this.hw10Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
         } else {
           this.syntaxError("[Parser][Terminal] LLDriver: Cannot work with terminal "+X);
@@ -202,12 +203,14 @@ class Parser {
         this.semantic.stack.popEOP(X);
         this.parseStack.pop();
 
-        this.hw9Lines.push('X = EOP(' + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ")");
-        this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
-        this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
-        this.hw9Lines.push("SS:" + this.semantic.stack.stackToString());
-        this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
-        this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        this.hw10Lines.push('X = EOP(' + X.leftIndex + "," + X.rightIndex + "," + X.currentIndex + "," + X.topIndex + ")");
+        this.hw10Lines.push("Input:" + this.tokenArray.join(' '));
+        this.hw10Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+        this.hw10Lines.push("SS:" + this.semantic.stack.stackToString());
+        this.hw10Lines.push("Indices:" + this.semantic.stack.pointersToString());
+        this.hw10Lines.push("Symbols:\n" + this.semantic.symbolTable.toString());
+        this.hw10Lines.push("Strings:\n" + this.semantic.symbolTable.stringSpace.toString());
+        this.hw10Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
 
       } else if (X.indexOf("#") === 0) {
 
@@ -263,22 +266,29 @@ class Parser {
           case "GenInfix":
             this.semantic.GenInfix(argsMatch[0],argsMatch[1],argsMatch[2],argsMatch[3]);
             break;
+          case "OpenScope":
+            this.semantic.OpenScope();
+            break;
+          case "CloseScope":
+            this.semantic.CloseScope();
+            break;
           default:
             throw "Can't figure out action symbol for " + X;
         }
 
-        this.hw9Lines.push('X = ' + X);
-        this.hw9Lines.push("Input:" + this.tokenArray.join(' '));
-        this.hw9Lines.push("PS:" + this.getPrettyPrintParseStack(true));
-        this.hw9Lines.push("SS:" +  this.semantic.stack.stackToString());
-        this.hw9Lines.push("Indices:" + this.semantic.stack.pointersToString());
-        this.hw9Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
+        this.hw10Lines.push('X = ' + X);
+        this.hw10Lines.push("Input:" + this.tokenArray.join(' '));
+        this.hw10Lines.push("PS:" + this.getPrettyPrintParseStack(true));
+        this.hw10Lines.push("SS:" +  this.semantic.stack.stackToString());
+        this.hw10Lines.push("Indices:" + this.semantic.stack.pointersToString());
+        this.hw10Lines.push("Symbols:\n" + this.semantic.symbolTable.toString());
+        this.hw10Lines.push("Strings:\n" + this.semantic.symbolTable.stringSpace.toString());
+        this.hw10Lines.push('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
         
       } //end if; 
     } //end while 
     
     this.tokenArray.shift();
-    this.hw8Lines.push("|" + pad("Done",11) + "|" + pad(this.tokenArray.join(' '),this.tokenArrayLength) + "|" + this.getPrettyPrintParseStack(false));
 
   } //end LLDriver 
 
